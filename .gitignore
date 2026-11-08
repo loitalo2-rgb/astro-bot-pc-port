@@ -1,0 +1,13 @@
+/build/
+/build_clang/
+/.vscode/
+/scratch/
+*.log
+*.tmp
+*.exe
+*.obj
+*.lib
+*.a
+*.spv
+*.cache
+.DS_Store
