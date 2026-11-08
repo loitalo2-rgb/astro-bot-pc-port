@@ -3,75 +3,53 @@
 #include <vector>
 #include <string>
 
-// Estrutura para mapeamento de Hooks e Shims nativos
-struct SyscallHook {
-    const char* name;
-    uintptr_t offset;
-    void* shimFunction;
-};
+// Offsets encontrados via Scanner
+const uintptr_t OFFSET_SCE_KERNEL_OPEN = 0x81a8a08;
+const uintptr_t OFFSET_SCE_KERNEL_READ = 0x82e55a9;
 
-// Exemplo de Shim Nativo para sceKernelOpen (Win32 direto)
+// Shim Nativo para sceKernelOpen
 int32_t Shim_SceKernelOpen(const char* path, int flags, int mode) {
-    std::cout << "[Hook Direct] Interceptado sceKernelOpen: " << (path ? path : "null") << std::endl;
-    if (!path) return -1;
-
-    // Mapeamento simples de caminho de jogo PS5 -> Windows
-    std::string pathStr(path);
-    std::string resolved = pathStr;
-    if (pathStr.rfind("app0:", 0) == 0) {
-        resolved = "D:/Games/abaixar/jogo/PPSA21567/" + pathStr.substr(5);
-    }
-
-    HANDLE hFile = CreateFileA(resolved.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) {
-        std::cerr << "  [!] Archivo nao encontrado: " << resolved << std::endl;
-        return -1;
-    }
-    return (int32_t)(uintptr_t)hFile;
+    std::cout << "[Shim] Interceptado sceKernelOpen: " << (path ? path : "null") << std::endl;
+    // ... logica de redirecionamento ...
+    return -1; // Placeholder
 }
 
-// Exemplo de Shim Nativo para sceKernelRead (Win32 ReadFile direto)
+// Shim Nativo para sceKernelRead
 int64_t Shim_SceKernelRead(int32_t fd, void* buf, size_t nbytes) {
-    HANDLE hFile = (HANDLE)(uintptr_t)fd;
-    if (hFile == INVALID_HANDLE_VALUE || !buf) return -1;
-
-    DWORD bytesRead = 0;
-    if (!ReadFile(hFile, buf, (DWORD)nbytes, &bytesRead, NULL)) {
-        return -1;
-    }
-    return (int64_t)bytesRead;
+    std::cout << "[Shim] Interceptado sceKernelRead!" << std::endl;
+    return -1; // Placeholder
 }
 
-// Função de Pattern Scanning para encontrar offsets de funções sceKernel no binário
-uintptr_t FindStringOffset(const char* binaryPath, const char* targetString) {
-    HANDLE hFile = CreateFileA(binaryPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) return 0;
+// Implementação manual de JMP Hook (sem dependências externas)
+bool ApplyHook(uintptr_t target, void* detour) {
+    DWORD oldProtect;
+    if (!VirtualProtect((void*)target, 14, PAGE_EXECUTE_READWRITE, &oldProtect)) return false;
 
-    DWORD fileSize = GetFileSize(hFile, NULL);
-    std::vector<char> buffer(fileSize);
-    DWORD readBytes = 0;
-    ReadFile(hFile, buffer.data(), fileSize, &readBytes, NULL);
-    CloseHandle(hFile);
+    // JMP [RIP + 0]
+    unsigned char jmp[] = { 0xFF, 0x25, 0x00, 0x00, 0x00, 0x00 };
+    memcpy((void*)target, jmp, sizeof(jmp));
+    *(uintptr_t*)((uintptr_t)target + 6) = (uintptr_t)detour;
 
-    std::string strTarget(targetString);
-    for (size_t i = 0; i < fileSize - strTarget.length(); ++i) {
-        if (memcmp(&buffer[i], targetString, strTarget.length()) == 0) {
-            return (uintptr_t)i;
-        }
-    }
-    return 0;
+    VirtualProtect((void*)target, 14, oldProtect, &oldProtect);
+    return true;
 }
 
 int main() {
-    std::cout << "=== Astro Bot Native Port Injector & Pattern Scanner ===" << std::endl;
-    const char* ebootPath = "D:/Games/abaixar/jogo/PPSA21567/eboot.bin";
+    std::cout << "=== Astro Bot Native Port: Aplicando Hooks ===" << std::endl;
 
-    uintptr_t openOffset = FindStringOffset(ebootPath, "sceKernelOpen");
-    uintptr_t readOffset = FindStringOffset(ebootPath, "sceKernelRead");
+    // Calcula o endereço real baseado na base do executável
+    uintptr_t base = (uintptr_t)GetModuleHandle(NULL);
 
-    std::cout << "[Scanner] Offset de 'sceKernelOpen' no binario: 0x" << std::hex << openOffset << std::endl;
-    std::cout << "[Scanner] Offset de 'sceKernelRead' no binario: 0x" << std::hex << readOffset << std::endl;
+    std::cout << "[Injector] Aplicando Hook em sceKernelOpen..." << std::endl;
+    if (ApplyHook(base + OFFSET_SCE_KERNEL_OPEN, (void*)&Shim_SceKernelOpen)) {
+        std::cout << "  [OK] Hook aplicado com sucesso!" << std::endl;
+    }
 
-    std::cout << "[Injector] Pronto para aplicar Hooks Nativa (Shims Win32)." << std::endl;
+    std::cout << "[Injector] Aplicando Hook em sceKernelRead..." << std::endl;
+    if (ApplyHook(base + OFFSET_SCE_KERNEL_READ, (void*)&Shim_SceKernelRead)) {
+        std::cout << "  [OK] Hook aplicado com sucesso!" << std::endl;
+    }
+
+    std::cout << "[Injector] Pronto. O jogo ira executar os shims quando chamado." << std::endl;
     return 0;
 }
