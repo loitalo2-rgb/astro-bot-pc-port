@@ -10,16 +10,18 @@ metadata:
 ## Progresso Atual
 - **Infraestrutura:** Repositório Git sincronizado.
 - **Validação de Arquitetura:** Implementada a demonstração de *Despacho Local* com sucesso.
-- **Implementação da Dispatch Table:** Criada a estrutura `SyscallDispatchTable` (`src/core/dispatch_table.h` e `.cpp`). Agora, o projeto possui um ponto centralizado para rotear chamadas de sistema (I/O e GPU) para *Shims* nativos, substituindo o antigo `KernelEmulator` monolítico por uma arquitetura de tabela de despacho modular.
+- **Implementação da Dispatch Table:** Criada a estrutura `SyscallDispatchTable` (`src/core/dispatch_table.h` e `.cpp`).
+- **Integração no Motor Principal:**
+  - `src/main.cpp` atualizado para incluir `<core/dispatch_table.h>` e invocar `InitializeDispatchTable()` na inicialização do aplicativo.
+  - `CMakeLists.txt` atualizado para compilar e incluir `src/core/dispatch_table.cpp` dentro da biblioteca estática `AstroBotCore`.
 
 ## Onde Paramos
-- A estrutura de dados (Dispatch Table) e a inicialização de *Shims* padrão estão prontas.
-- O projeto está estruturado de forma que cada nova funcionalidade do jogo exija apenas a adição de um ponteiro na tabela e sua respectiva implementação de *Shim*.
+- A Dispatch Table agora é oficialmente inicializada como a primeira etapa de bootstrapping do aplicativo no `main.cpp`.
+- O build CMake está configurado e integrado para garantir a compilação limpa em todas as plataformas target.
 
 ## Próximos Passos
-1. **Integração no Motor Principal:** Substituir os locais onde o jogo ainda invoca `KernelEmulator::SceKernel...` pela chamada via `g_Dispatch.SceKernel...`.
-2. **Expansão de Shim Gráfico:** Implementar `Shim_GpuCreateBuffer` utilizando o pipeline Vulkan existente.
-3. **Mapeamento de Assets:** Expandir a leitura dos arquivos `.jxm` utilizando a nova camada de I/O por despacho.
+1. **Substituição de Chamadas legadas:** Mapear os pontos de entrada no `eboot_loader.cpp` para invocarem `g_Dispatch` diretamente em vez das chamadas do `KernelEmulator`.
+2. **Integração Vulkan-Memory:** Ligar `g_Dispatch.SceGpuCreateBuffer` aos heaps e buffers `VkBuffer` do `vulkan_backend.cpp`.
 
 [[status-emulacao-astro-bot]]
 [[Relatorio_Completo_AstroBot_PC.html]]

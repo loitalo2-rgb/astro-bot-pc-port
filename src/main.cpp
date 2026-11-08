@@ -4,8 +4,8 @@
 //         Medidor de FPS em Tempo Real e Visualizador 3D do Astro Bot
 // ==============================================================================
 
+#include "core/dispatch_table.h"
 #include "core/eboot_loader.h"
-#include "core/nid_resolver.h"
 #include "config/config_manager.h"
 #include "kernel/kernel_emulator.h"
 #include "gpu/vulkan_backend.h"
@@ -1189,6 +1189,9 @@ int main(int argc, char* argv[]) {
             : (fs::path(gameDataPath).parent_path() / "eboot.bin").string();
 
         LogMessage("[Main] GameDataPath: " + (gameDataPath.empty() ? std::string("(nao configurado)") : gameDataPath));
+
+        // 1b. Tabela de Despacho Nativa (Shims)
+        InitializeDispatchTable();
 
         // 2. Kernel e Memória Direta (GARLIC e ONION)
         KernelEmulator::Get().Initialize();
