@@ -8,18 +8,18 @@ metadata:
 # Estado do Projeto: Port Astro Bot para PC (08/11/2026)
 
 ## Progresso Atual
-- **Infraestrutura:** Repositório Git sincronizado no GitHub: [loitalo2-rgb/astro-bot-pc-port](https://github.com/loitalo2-rgb/astro-bot-pc-port).
-- **Validação de Arquitetura de Port Nativo:** Implementada a demonstração segura de **Despacho Local via Tabela de Ponteiros (Function Pointer Swapping)** em `tests/hook_demo/local_dispatch_demo.cpp`.
-- **Segurança de Execução:** Substituída a abordagem de injeção de memória remota (insegura/instável) por um modelo de inicialização de *Dispatch Table* interna, garantindo 100% de estabilidade sem risco de acesso indevido à memória (`VirtualProtectEx`/`WriteProcessMemory` eliminados).
+- **Infraestrutura:** Repositório Git sincronizado.
+- **Validação de Arquitetura:** Implementada a demonstração de *Despacho Local* com sucesso.
+- **Implementação da Dispatch Table:** Criada a estrutura `SyscallDispatchTable` (`src/core/dispatch_table.h` e `.cpp`). Agora, o projeto possui um ponto centralizado para rotear chamadas de sistema (I/O e GPU) para *Shims* nativos, substituindo o antigo `KernelEmulator` monolítico por uma arquitetura de tabela de despacho modular.
 
 ## Onde Paramos
-- O teste de despacho local foi compilado e executado com sucesso, demonstrando a transição fluida entre chamadas originais e *shims* baseados em Win32 (`CreateFileA`/`ReadFile`).
-- O código de demonstração anterior (`injector.cpp` / `target.cpp`) foi descontinuado em favor do padrão seguro de compilação/linkagem nativa.
+- A estrutura de dados (Dispatch Table) e a inicialização de *Shims* padrão estão prontas.
+- O projeto está estruturado de forma que cada nova funcionalidade do jogo exija apenas a adição de um ponteiro na tabela e sua respectiva implementação de *Shim*.
 
 ## Próximos Passos
-1. **Estruturação da Tabela de Despacho (Dispatch Table):** Organizar o `src/common/types.h` ou um novo arquivo `src/core/dispatch_table.h` com todos os ponteiros de chamadas de sistema que o Astro Bot utiliza.
-2. **Implementação do Shim de Vulkan/Graphics:** Mapear as chamadas de exibição e buffers de geometria utilizando a mesma estratégia de despacho local segura.
-3. **Mapeamento de Assets:** Expandir a leitura dos arquivos `.jxm` utilizando a camada de I/O por despacho.
+1. **Integração no Motor Principal:** Substituir os locais onde o jogo ainda invoca `KernelEmulator::SceKernel...` pela chamada via `g_Dispatch.SceKernel...`.
+2. **Expansão de Shim Gráfico:** Implementar `Shim_GpuCreateBuffer` utilizando o pipeline Vulkan existente.
+3. **Mapeamento de Assets:** Expandir a leitura dos arquivos `.jxm` utilizando a nova camada de I/O por despacho.
 
 [[status-emulacao-astro-bot]]
 [[Relatorio_Completo_AstroBot_PC.html]]
