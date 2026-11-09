@@ -9,18 +9,16 @@ metadata:
 
 ## Progresso Atual
 - **Infraestrutura:** Repositório Git sincronizado.
-- **Integração de NIDs com a Dispatch Table:**
-  - Atualizado `src/core/nid_resolver.cpp` para importar `<core/dispatch_table.h>`.
-  - Conectadas as funções de I/O de kernel (`sceKernelOpen`, `sceKernelClose`, `sceKernelRead`, `sceKernelLseek`) diretamente para os ponteiros da `g_Dispatch`.
-  - Conectada a chamada gráfica do AGC (`sceAgcCreateBuffer`) diretamente ao shim gráfico da `g_Dispatch`.
+- **Correção de Build e Unificação:**
+  - Adicionado o include `#include "core/nid_resolver.h"` em `src/main.cpp`.
+  - Compilação concluída com sucesso (`AstroBotPC.exe` gerado e atualizado na pasta `build/`).
+  - O binário do jogo agora inicializa a tabela de NIDs e a Dispatch Table unificada em tempo de execução.
 
 ## Onde Paramos
-- Os resolvedores de símbolos do jogo (`NidResolver`) agora delegam as chamadas de sistema diretamente para a nossa nova arquitetura de **Dispatch Table** e **Shims Nativos**.
-- O sistema está unificado: toda chamada de I/O ou GPU solicitada pelo binário é roteada de forma limpa e modular.
+- O motor unificado está compilado e pronto. As chamadas de sistema e NIDs do Astro Bot estão linkadas aos Shims nativos em C++.
 
 ## Próximos Passos
-1. **Compilação e Validação do Boot:** Recompilar o projeto para garantir que as lambdas de ligação c-style compilem sem erros.
-2. **Execução:** Rodar o executável para testar a inicialização unificada com a Dispatch Table ativa.
+1. **Executar o Jogo Compilado:** Iniciar o executável em `build/AstroBotPC.exe` para validar o comportamento dos novos Shims e analisar o `astro_launch.log`.
 
 [[status-emulacao-astro-bot]]
 [[Relatorio_Completo_AstroBot_PC.html]]

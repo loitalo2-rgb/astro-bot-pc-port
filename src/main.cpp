@@ -6,6 +6,7 @@
 
 #include "core/dispatch_table.h"
 #include "core/eboot_loader.h"
+#include "core/nid_resolver.h"
 #include "config/config_manager.h"
 #include "kernel/kernel_emulator.h"
 #include "gpu/vulkan_backend.h"
