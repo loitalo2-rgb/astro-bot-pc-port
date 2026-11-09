@@ -1,4 +1,5 @@
 #include "nid_resolver.h"
+#include "dispatch_table.h"
 #include "../stubs/sce_stubs.h"
 #include "../audio/audio_backend.h"
 #include "../input/input_manager.h"
@@ -255,11 +256,11 @@ void NidResolver::BuildTable() {
     Register("scePthreadSemInit",                 "libkernel", (void*)0);
     Register("scePthreadSemPost",                 "libkernel", (void*)0);
     Register("scePthreadSemWait",                 "libkernel", (void*)0);
-    Register("sceKernelOpen",                     "libkernel", (void*)KernelEmulator::SceKernelOpen);
-    Register("sceKernelClose",                    "libkernel", (void*)KernelEmulator::SceKernelClose);
-    Register("sceKernelRead",                     "libkernel", (void*)KernelEmulator::SceKernelRead);
+    Register("sceKernelOpen",                     "libkernel", (void*)+[](const char* path, int flags, int mode) -> int32_t { return g_Dispatch.SceKernelOpen(path, flags, mode); });
+    Register("sceKernelClose",                    "libkernel", (void*)+[](int fd) -> int32_t { return g_Dispatch.SceKernelClose(fd); });
+    Register("sceKernelRead",                     "libkernel", (void*)+[](int fd, void* buf, size_t nbytes) -> int64_t { return g_Dispatch.SceKernelRead(fd, buf, nbytes); });
     Register("sceKernelWrite",                    "libkernel", (void*)0);
-    Register("sceKernelLseek",                    "libkernel", (void*)KernelEmulator::SceKernelLseek);
+    Register("sceKernelLseek",                    "libkernel", (void*)+[](int fd, int64_t offset, int whence) -> int64_t { return g_Dispatch.SceKernelLseek(fd, offset, whence); });
     Register("sceKernelFstat",                    "libkernel", (void*)0);
     Register("sceKernelGetdents",                 "libkernel", (void*)0);
 
@@ -348,7 +349,7 @@ void NidResolver::BuildTable() {
     Register("sceAgcWaitUntilSafeForRendering","libSceAgc", (void*)0);
     Register("sceAgcAllocateVideoMemory",    "libSceAgc", (void*)0);
     Register("sceAgcFreeVideoMemory",        "libSceAgc", (void*)0);
-    Register("sceAgcCreateBuffer",           "libSceAgc", (void*)0);
+    Register("sceAgcCreateBuffer",           "libSceAgc", (void*)+[](size_t size, uint32_t flags) -> void* { return g_Dispatch.SceGpuCreateBuffer(size, flags); });
     Register("sceAgcCreateTexture",          "libSceAgc", (void*)0);
     Register("sceAgcCreateRenderTarget",     "libSceAgc", (void*)0);
     Register("sceAgcCreateDepthRenderTarget","libSceAgc", (void*)0);

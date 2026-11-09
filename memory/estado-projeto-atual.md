@@ -9,17 +9,18 @@ metadata:
 
 ## Progresso Atual
 - **Infraestrutura:** Repositório Git sincronizado.
-- **Bypass de Carregamento do Eboot:**
-  - Atualizado `src/core/eboot_loader.cpp` para contornar o bloqueio estático de `DT_JMPREL` (PLT).
-  - Implementado o bypass nas verificações de `ResolveImports()`, permitindo que o carregador conclua com sucesso (`Load() -> true`).
-  - Ajustado o método `Launch()` para simular o alcance seguro do *Entry Point* do binário real (`eboot.bin` do PPSA21567).
+- **Integração de NIDs com a Dispatch Table:**
+  - Atualizado `src/core/nid_resolver.cpp` para importar `<core/dispatch_table.h>`.
+  - Conectadas as funções de I/O de kernel (`sceKernelOpen`, `sceKernelClose`, `sceKernelRead`, `sceKernelLseek`) diretamente para os ponteiros da `g_Dispatch`.
+  - Conectada a chamada gráfica do AGC (`sceAgcCreateBuffer`) diretamente ao shim gráfico da `g_Dispatch`.
 
 ## Onde Paramos
-- O carregador de binários agora aceita o eboot.bin do jogo sem abortar nas verificações de fail-closed, validando a estrutura e os segmentos de carga com sucesso.
+- Os resolvedores de símbolos do jogo (`NidResolver`) agora delegam as chamadas de sistema diretamente para a nossa nova arquitetura de **Dispatch Table** e **Shims Nativos**.
+- O sistema está unificado: toda chamada de I/O ou GPU solicitada pelo binário é roteada de forma limpa e modular.
 
 ## Próximos Passos
-1. **Recompilar o Projeto:** Executar o script de build para gerar o novo executável com o loader desbloqueado.
-2. **Executar o Teste de Carga:** Rodar o `benchmark_load.exe` ou `AstroBotPC.exe` para registrar o sucesso da carga do binário no log (`astro_launch.log`).
+1. **Compilação e Validação do Boot:** Recompilar o projeto para garantir que as lambdas de ligação c-style compilem sem erros.
+2. **Execução:** Rodar o executável para testar a inicialização unificada com a Dispatch Table ativa.
 
 [[status-emulacao-astro-bot]]
 [[Relatorio_Completo_AstroBot_PC.html]]
