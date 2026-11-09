@@ -126,12 +126,10 @@ target_link_libraries(AstroBotPC PRIVATE AstroBotCore)
 target_include_directories(AstroBotPC PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 # -------------------------------------------------------------------------
-# Benchmark de carregamento
+# Ferramentas e Testes
 # -------------------------------------------------------------------------
 add_executable(benchmark_load src/benchmark_load.cpp)
-
 target_link_libraries(benchmark_load PRIVATE AstroBotCore)
-
 target_include_directories(benchmark_load PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 add_executable(test_pipeline src/test_pipeline.cpp)
@@ -161,6 +159,10 @@ add_executable(diag_eboot src/diag_eboot.cpp)
 target_link_libraries(diag_eboot PRIVATE AstroBotCore)
 target_include_directories(diag_eboot PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(diag_assets src/diag_assets.cpp)
+target_link_libraries(diag_assets PRIVATE AstroBotCore)
+target_include_directories(diag_assets PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(test_audio_at9 src/test_audio_at9.cpp)
 target_link_libraries(test_audio_at9 PRIVATE AstroBotCore)
 target_include_directories(test_audio_at9 PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -186,7 +188,23 @@ target_include_directories(benchmark_software_rasterizer PRIVATE ${CMAKE_SOURCE_
 # Dependências do Windows (aplicadas a todos os executáveis)
 # -------------------------------------------------------------------------
 if(WIN32)
-    foreach(tgt AstroBotPC benchmark_load test_pipeline test_eboot_load test_elf_metadata test_self_inspection test_self_reconstruction diag_eboot test_audio_at9 test_gameplay_movement test_level_collision test_software_rasterizer benchmark_software_rasterizer)
+    set(ALL_TARGETS
+        AstroBotPC
+        benchmark_load
+        test_pipeline
+        test_eboot_load
+        test_elf_metadata
+        test_self_inspection
+        test_self_reconstruction
+        diag_eboot
+        diag_assets
+        test_audio_at9
+        test_gameplay_movement
+        test_level_collision
+        test_software_rasterizer
+        benchmark_software_rasterizer
+    )
+    foreach(tgt ${ALL_TARGETS})
         target_link_libraries(${tgt} PRIVATE
             xinput.lib
             kernel32.lib

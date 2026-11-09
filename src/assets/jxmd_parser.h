@@ -31,6 +31,19 @@ struct JxmdChunkInfo {
     uint32_t flags = 0;
 };
 
+struct JxmdTexture {
+    uint32_t id = 0;
+    std::string name;
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t format = 0;
+};
+
+struct JxmdMaterial {
+    uint32_t id = 0;
+    std::vector<uint32_t> textureIds; // Referências aos IDs em JxmdTexture
+};
+
 struct JxmdMesh {
     std::string name;
     std::string sourcePath;
@@ -53,6 +66,9 @@ struct JxmdMesh {
     std::vector<uint32_t> indices;
     std::vector<uint32_t> collisionIndices;
     std::vector<JxmdSubmesh> submeshes;
+    std::vector<JxmdTexture> textures;
+    std::vector<JxmdMaterial> materials;
+    std::vector<std::string> strings;
     bool collisionDataValid = true;
     bool collisionIndicesRestricted = false;
     bool valid = false;

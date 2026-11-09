@@ -295,6 +295,57 @@ bool ParseJxmdFile(const std::string& filePath, JxmdMesh& outMesh) {
         }
     }
 
+    const JxmdChunkInfo* stbl = FindChunk(chunks, "STBL");
+    const JxmdChunkInfo* stbd = FindChunk(chunks, "STBD");
+    if (stbl && stbd) {
+        const size_t stblBase = static_cast<size_t>(stbl->offset) + stbl->payloadOffset;
+        const size_t stbdBase = static_cast<size_t>(stbd->offset) + stbd->payloadOffset;
+        for (uint32_t i = 0; i < stbl->count; ++i) {
+            const size_t entry = stblBase + static_cast<size_t>(i) * stbl->stride;
+            uint32_t strOffset = ReadU32(data, entry + 0);
+            uint32_t strLen = ReadU32(data, entry + 4);
+            if (stbdBase + strOffset + strLen <= data.size()) {
+                std::string s(reinterpret_cast<const char*>(data.data() + stbdBase + strOffset), strLen);
+                if (!s.empty() && s.back() == '\0') s.pop_back();
+                outMesh.strings.push_back(s);
+            }
+        }
+    }
+
+    const JxmdChunkInfo* texi = FindChunk(chunks, "TEXI");
+    if (texi) {
+        const size_t texiBase = static_cast<size_t>(texi->offset) + texi->payloadOffset;
+        for (uint32_t i = 0; i < texi->count; ++i) {
+            const size_t entry = texiBase + static_cast<size_t>(i) * texi->stride;
+            JxmdTexture tex;
+            tex.id = ReadU32(data, entry + 0);
+            if (tex.id < outMesh.strings.size()) {
+                tex.name = outMesh.strings[tex.id];
+            }
+            tex.width = ReadU32(data, entry + 4);
+            tex.height = ReadU32(data, entry + 8);
+            tex.format = ReadU32(data, entry + 12);
+            outMesh.textures.push_back(tex);
+        }
+    }
+
+    const JxmdChunkInfo* mati = FindChunk(chunks, "MATI");
+    if (mati) {
+        const size_t matiBase = static_cast<size_t>(mati->offset) + mati->payloadOffset;
+        for (uint32_t i = 0; i < mati->count; ++i) {
+            const size_t entry = matiBase + static_cast<size_t>(i) * mati->stride;
+            JxmdMaterial mat;
+            mat.id = ReadU32(data, entry + 0);
+            for (size_t j = 4; j + 4 <= mati->stride; j += 4) {
+                uint32_t texId = ReadU32(data, entry + j);
+                if (texId != 0xFFFFFFFF && texId != 0) {
+                     mat.textureIds.push_back(texId);
+                }
+            }
+            outMesh.materials.push_back(mat);
+        }
+    }
+
     uint32_t maxIndex = 0;
     for (uint32_t index : outMesh.indices) {
         maxIndex = std::max(maxIndex, index);
