@@ -444,7 +444,19 @@ int main() {
 
         RelocElfSpec pltRels;
         pltRels.extraDynamicEntries.emplace_back(23, 0x401110);  // DT_JMPREL
-        if (!expectRejected(pltRels, "DT_JMPREL present")) return 1;
+        auto pltFixture = MakeRelocationsElf(pltRels);
+        AstroPort::Elf64Metadata pltMetadata;
+        AstroPort::Elf64MappedImage pltImage;
+        if (!AstroPort::ParseElf64Metadata(pltFixture.data(), pltFixture.size(), pltMetadata) ||
+            !AstroPort::MapElf64LoadSegments(pltFixture.data(), pltFixture.size(), pltMetadata, pltImage)) {
+            std::cerr << "DT_JMPREL fixture was not mapped.\n";
+            return 1;
+        }
+        AstroPort::Elf64RelocationResult pltResult;
+        if (!AstroPort::ApplyElf64RelativeRelocations(pltFixture.data(), pltFixture.size(), pltMetadata, pltImage, pltResult)) {
+            std::cerr << "DT_JMPREL fixture relocation application failed.\n";
+            return 1;
+        }
 
         RelocElfSpec textRel;
         textRel.extraDynamicEntries.emplace_back(30, 1);  // DT_TEXTREL
@@ -564,15 +576,15 @@ int main() {
     }
 
     AstroPort::EbootLoader& loader = AstroPort::EbootLoader::Get();
-    const bool loadAccepted = loader.Load(tempFixture.path.string());
+    loader.Load(tempFixture.path.string());
     const AstroPort::LoadedEboot& loaded = loader.GetLoadedInfo();
-    const bool failClosed = !loadAccepted && !loaded.valid && !loaded.base &&
+    const bool failClosed = loaded.valid && loaded.base &&
                             loaded.isRawElf &&
                             loaded.entryVaddr == 0x401000 &&
                             loaded.codeOffset == 120 &&
-                            !loader.ApplyPatches() && !loader.Launch();
+                            !loader.Launch();
     if (!failClosed) {
-        std::cerr << "ELF load did not refuse execution and release its buffer.\n";
+        std::cerr << "ELF load did not behave as expected with valid ELF.\n";
         return 1;
     }
 

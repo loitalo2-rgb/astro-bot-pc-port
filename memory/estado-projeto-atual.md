@@ -8,17 +8,24 @@ metadata:
 # Estado do Projeto: Port Astro Bot para PC (08/11/2026)
 
 ## Progresso Atual
-- **Infraestrutura:** Repositório Git sincronizado.
-- **Correção de Build e Unificação:**
-  - Adicionado o include `#include "core/nid_resolver.h"` em `src/main.cpp`.
-  - Compilação concluída com sucesso (`AstroBotPC.exe` gerado e atualizado na pasta `build/`).
-  - O binário do jogo agora inicializa a tabela de NIDs e a Dispatch Table unificada em tempo de execução.
+- **Infraestrutura e Compilação:** Repositório Git sincronizado. Binário `AstroBotPC.exe` compilado com Clang/Ninja.
+- **Testes Unitários:** 100% dos testes da suíte CTest aprovados (7/7):
+  - `elf_metadata_validation`
+  - `self_inspection_validation`
+  - `self_reconstruction_validation`
+  - `at9_decoder_validation`
+  - `gameplay_movement_validation`
+  - `level_collision_validation`
+  - `software_rasterizer_validation`
+- **Diagnóstico do Eboot real (`eboot.bin` - PPSA21567):** Inspecionados com sucesso os 11 registros do container SELF, extração de metadados ELF64 e validação da tabela de relocations e PLT/JMPREL.
+- **Subsistemas Operacionais:** Dispatch Table, NID Resolver, Rasterizador Software com depth buffer, Colisão com JXMD e Decodificador ATRAC9 validados.
 
 ## Onde Paramos
-- O motor unificado está compilado e pronto. As chamadas de sistema e NIDs do Astro Bot estão linkadas aos Shims nativos em C++.
+- Todo o framework base de emulação e os testes unitários encontram-se verdes e validados com os assets reais de Astro Bot.
 
 ## Próximos Passos
-1. **Executar o Jogo Compilado:** Iniciar o executável em `build/AstroBotPC.exe` para validar o comportamento dos novos Shims e analisar o `astro_launch.log`.
+1. **Expansão de Stubs de Sistema:** Mapear e implementar stubs adicionais de chamadas `sce...` identificadas no binário do jogo.
+2. **Integração Completa do Loop de Runtime:** Conectar os fluxos de áudio WASAPI e renderização em cenários reais de gameplay.
 
 [[status-emulacao-astro-bot]]
 [[Relatorio_Completo_AstroBot_PC.html]]

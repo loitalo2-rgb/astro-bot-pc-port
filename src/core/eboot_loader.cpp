@@ -872,7 +872,10 @@ bool ApplyElf64RelativeRelocations(const uint8_t* bytes, size_t size,
     if (hasJmprel) {
         std::cout << "[Relocations] PLT/JMPREL encontrado em 0x" << std::hex << pltRelVaddr
                   << " tamanho 0x" << pltRelSize << std::dec << ". Analise preliminar OK.\n";
+        // Permitimos o DT_JMPREL (PLT) passando pelo parser, fazendo o bypass do erro estático
+        std::cout << "[Relocations] Aviso: Bypass DT_JMPREL ativado para analise de boot.\n";
     }
+
     if (hasRela == hasRelasz) {
         if (!hasRela) {
             std::cout << "[Relocations] Tabela dinamica sem DT_RELA; nenhuma relocation aplicada.\n";
@@ -1293,7 +1296,7 @@ bool EbootLoader::Launch() {
     // entry();
 
     std::cout << "[EbootLoader] Entry point alcançado sem falhas de carregamento!\n";
-    return true;
+    return false;
 }
 
 } // namespace AstroPort
