@@ -2,6 +2,7 @@
 
 #include "../common/types.h"
 #include "vulkan_types.h"
+#include "../assets/asset_loader.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -12,8 +13,6 @@
 #endif
 
 namespace AstroPort {
-
-struct GnfTexture;
 
 struct MeshDrawRange {
     uint32_t indexOffset = 0;
