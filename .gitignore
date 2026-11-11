@@ -1,0 +1,54 @@
+# ASTRO BOT PC — arquivos que não entram no controle de versão
+
+# Builds geradas pelo CMake
+/build/
+/build_clang/
+/out/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+
+# Dados locais e caches
+/savedata/
+/cache/
+/sce_sys/
+/app0/
+
+# Pastas locais não relacionadas ao projeto
+/linkedin/
+/dkb-pc-recomp/
+/referencias/
+/scratch/
+/.claude/
+/.vs/
+
+# Objetos de compilação e saída de IDE
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.idb
+*.suo
+*.user
+*.tlog
+*.sln
+*.vcxproj
+*.vcxproj.filters
+
+# Binários (não distribuir; relinker é GPL-2.0, obtido da release oficial)
+*.exe
+*.dll
+
+# Logs de execução
+*.log
+
+# Dumps proprietários do jogo (Sony / Team ASOBI) — nunca versionar
+**/eboot.bin
+**/*.prx
+**/*.sfx
+
+# Capturas e artefatos brutos
+*.bmp

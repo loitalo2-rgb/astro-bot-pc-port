@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Relatório de Status — Port de ASTRO BOT (PS5) para PC</title>
+<style>
+    @page { size: A4; margin: 17mm 15mm 17mm 15mm; }
+    body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: #1a202c;
+        line-height: 1.5;
+        font-size: 10pt;
+        background: #ffffff;
+        margin: 0;
+    }
+    h1, h2, h3, h4 {
+        color: #0d254c;
+        margin-top: 1.1em;
+        margin-bottom: 0.35em;
+        font-weight: 700;
+        page-break-after: avoid;
+    }
+    h1 { font-size: 19pt; border-bottom: 2px solid #0066cc; padding-bottom: 7px; margin-top: 0; }
+    h2 { font-size: 13.5pt; border-left: 4px solid #0066cc; padding: 4px 0 4px 10px; background: #f7fafc; }
+    h3 { font-size: 11pt; color: #2b6cb0; }
+    p { margin: 0.45em 0; text-align: justify; }
+    ul, ol { margin: 0.4em 0 0.6em 1.2em; padding: 0; }
+    li { margin: 0.25em 0; }
+    .cover {
+        background: linear-gradient(135deg, #0a1020 0%, #1a365d 100%);
+        color: #ffffff;
+        padding: 26px;
+        border-radius: 8px;
+        margin-bottom: 22px;
+    }
+    .cover h1 { color: #00d2ff; border-bottom: 2px solid #00d2ff; font-size: 21pt; }
+    .cover p { color: #dbeafe; }
+    .meta {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 18px;
+        margin-top: 14px;
+        font-size: 9pt;
+        background: rgba(255,255,255,0.08);
+        padding: 12px;
+        border-radius: 6px;
+    }
+    .badge {
+        display: inline-block;
+        background: #2f855a;
+        color: #ffffff;
+        padding: 3px 10px;
+        font-size: 8.5pt;
+        font-weight: 700;
+        border-radius: 12px;
+        text-transform: uppercase;
+        margin-right: 6px;
+    }
+    .badge-blue { background: #2b6cb0; }
+    .badge-orange { background: #c05621; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9pt; page-break-inside: avoid; }
+    th, td { border: 1px solid #cbd5e0; padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: #ebf8ff; color: #2b6cb0; font-weight: 700; }
+    tr:nth-child(even) td { background: #f7fafc; }
+    code {
+        font-family: Consolas, 'Courier New', monospace;
+        background: #edf2f7;
+        color: #c53030;
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 8.7pt;
+    }
+    pre {
+        background: #1a202c;
+        color: #f7fafc;
+        padding: 10px 12px;
+        border-radius: 5px;
+        font-family: Consolas, 'Courier New', monospace;
+        font-size: 8.2pt;
+        line-height: 1.35;
+        overflow-x: auto;
+        margin: 8px 0;
+        page-break-inside: avoid;
+        white-space: pre-wrap;
+    }
+    .callout {
+        border-left: 4px solid #3182ce;
+        background: #ebf8ff;
+        padding: 9px 12px;
+        margin: 10px 0;
+        border-radius: 0 4px 4px 0;
+        font-size: 9.3pt;
+    }
+    .success { border-left-color: #38a169; background: #f0fff4; }
+    .warning { border-left-color: #d69e2e; background: #fffaf0; }
+    .danger { border-left-color: #c53030; background: #fff5f5; }
+    .page-break { page-break-before: always; }
+    .small { font-size: 8.7pt; color: #4a5568; }
+    .footer {
+        margin-top: 26px;
+        padding-top: 8px;
+        border-top: 1px solid #e2e8f0;
+        font-size: 8pt;
+        color: #718096;
+        text-align: center;
+    }
+</style>
+</head>
+<body>
+
+<div class="cover">
+    <span class="badge">Handoff técnico</span>
+    <span class="badge badge-blue">Estado verificado</span>
+    <span class="badge badge-orange">Texturas BC7 no Vulkan</span>
+    <h1>ASTRO BOT — PORT PARA PC</h1>
+    <p>Relatório de progresso, decisões técnicas e ponto exato de retomada do projeto de recompilação/emulação de ASTRO BOT (PS5) para Windows.</p>
+    <div class="meta">
+        <div><strong>Data:</strong> 23 de outubro de 2026</div>
+        <div><strong>Plataforma alvo:</strong> Windows x64 / Vulkan</div>
+        <div><strong>Jogo base:</strong> PPSA21567 (PS5)</div>
+        <div><strong>Compilador:</strong> LLVM-MinGW / Clang++ UCRT</div>
+        <div><strong>Executável:</strong> build\clang\AstroBot_PC.exe</div>
+        <div><strong>Build atual:</strong> concluído; textura BC7 12 mips + captura de frame</div>
+    </div>
+</div>
+
+<h2>1. Sumário executivo</h2>
+<p>O projeto já possui uma base funcional de janela, interface GDI, viewport Vulkan real, swapchain, pipeline gráfico, buffers de malha e apresentação de frames. A renderização do viewport foi validada por logs e está estável.</p>
+<p>Na frente de assets, a <strong>decodificação real do contêiner GNF</strong> está integrada ao pipeline: o carregador lê o cabeçalho v4/v5, extrai dimensões, mips, tile mode e formato, e realiza o <strong>detile padrão de 64 KB</strong> de todos os mips das texturas BC7/BC4. Nesta etapa, a textura passou a ser <strong>enviada para a GPU</strong> (imagem BC7, staging buffer, sampler e descriptor set) e o shader já recebe UVs e amostra o <code>sampler2D</code>.</p>
+<div class="callout success">
+    <strong>Ponto de retomada:</strong> a textura difusa BC7 do corpo (<code>astro_lowpoly_costume_d.gnfp</code>) com 12 mips é amostrada com UVs validados em <code>[0,1]</code> e confirmada por captura de frame. Os 8 ranges de índice e os 4 materiais JXMD já são extraídos e desenhados separadamente; o foco agora é mapear material→textura (corpo/olhos), escolher sampler por material e integrar os demais mapas (normal, roughness, AO).
+</div>
+
+<h2>2. Estado atual do projeto</h2>
+<table>
+    <tr><th>Área</th><th>Status</th><th>Evidência / observação</th></tr>
+    <tr><td>Build Windows/Clang</td><td><strong>Concluído</strong></td><td><code>build_clang.bat</code> finaliza com “Build Clang CONCLUIDA com SUCESSO”.</td></tr>
+    <tr><td>Janela e interface GDI</td><td><strong>Funcional</strong></td><td>Janela principal, painel lateral, FPS e catálogo de recursos.</td></tr>
+    <tr><td>Viewport Vulkan</td><td><strong>Funcional</strong></td><td>HWND filho <code>AstroVulkanViewport</code>, swapchain 714x438, 3 imagens, formato 44 (BGRA8 UNORM).</td></tr>
+    <tr><td>Pipeline gráfico</td><td><strong>Funcional</strong></td><td><code>vkCreateGraphicsPipelines</code> OK; primeiro frame apresentado.</td></tr>
+    <tr><td>Malha no viewport</td><td><strong>Funcional</strong></td><td>Buffers com 1236 vértices e 5598 índices; desenho indexado ativo.</td></tr>
+    <tr><td>Textura GNF — metadados</td><td><strong>Implementado</strong></td><td>Parser v4/v5 real em <code>asset_loader.cpp</code>.</td></tr>
+    <tr><td>Textura GNF — detile</td><td><strong>Implementado</strong></td><td>Standard 64 KB para BC7 (16 B/bloco) e BC4 (8 B/bloco); previews offline validados.</td></tr>
+    <tr><td>Upload de textura no Vulkan</td><td><strong>Validado</strong></td><td><code>VkImage</code> BC7, sampler, descriptor set e barreira; captura de frame confirma a amostragem.</td></tr>
+    <tr><td>Compressão BC no dispositivo</td><td><strong>Habilitado</strong></td><td><code>textureCompressionBC</code> consultado e ativado em <code>vkCreateDevice</code>.</td></tr>
+    <tr><td>Shader com amostragem</td><td><strong>Implementado</strong></td><td>UV no location 2; fragment shader amostra <code>sampler2D</code> (SPIR-V regerado).</td></tr>
+    <tr><td>Cadeia de mips GNF</td><td><strong>Implementado</strong></td><td>12/12 mips carregados e enviados; 5.592.432 bytes no total.</td></tr>
+    <tr><td>Captura de frame Vulkan</td><td><strong>Implementado</strong></td><td><code>ASTRO_CAPTURE_FRAME=1</code> gera <code>astro_frame_capture.bmp</code> via <code>vkCmdCopyImageToBuffer</code>.</td></tr>
+    <tr><td>Malha JXMD definitiva</td><td><strong>Parcial</strong></td><td>Há parser e fallback procedural; geometria real ainda precisa ser consolidada.</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2>3. Arquitetura e fluxo atual</h2>
+<pre>main.cpp
+  ├─ janela Win32 + GDI
+  ├─ cria HWND filho "AstroVulkanViewport"
+  └─ VulkanBackend::Initialize(hwnd, largura, altura, vsync)
+        ├─ instância / physical device / device / fila
+        ├─ surface + swapchain + image views
+        ├─ depth buffer + render pass + framebuffers
+        ├─ pipeline (astro.vert + astro.frag embutidos em SPIR-V)
+        └─ buffers de vértice/índice
+
+AssetLoader
+  ├─ Initialize(dataRoot)
+  ├─ LoadJxmd(...)  → malha
+  └─ LoadGnf(...)   → metadados + mip 0 destilado em GnfTexture.data</pre>
+<p>O viewport é redesenhado em <code>BeginFrame()</code> / <code>EndFrame()</code>. A câmera e o modelo são controlados por <code>SetModelTransform(rotY, rotX, zoom, jump)</code>. A transformação usa matrizes próprias (<code>Mat4</code>, <code>Perspective</code>, <code>RotateX/Y</code>) e push constants.</p>
+
+<h2>4. O que já foi implementado</h2>
+
+<h3>4.1. Base de plataforma e interface</h3>
+<ul>
+    <li>Janela principal Win32 com interface GDI, painel lateral e medidor de FPS.</li>
+    <li>HWND filho dedicado ao Vulkan, com classe <code>AstroVulkanViewport</code>.</li>
+    <li>Cálculo de retângulo do viewport: <code>left=31</code>, <code>top=172</code>, <code>vpW=(largura-70)*3/5</code>, <code>bottom=altura-71</code>.</li>
+    <li>Redimensionamento e recriação de swapchain em <code>VK_ERROR_OUT_OF_DATE_KHR</code>.</li>
+</ul>
+
+<h3>4.2. Backend Vulkan</h3>
+<ul>
+    <li>Criação de instância, surface Win32, escolha de GPU e fila gráfica.</li>
+    <li>Swapchain com 3 imagens e formato BGRA8 UNORM (44).</li>
+    <li>Image views, depth buffer, render pass e framebuffers.</li>
+    <li>Pipeline gráfico com shaders SPIR-V embutidos em <code>shader_bytecode.h</code>.</li>
+    <li>Sincronização com semáforos e fence; apresentação via <code>vkQueuePresentKHR</code>.</li>
+    <li>Buffers de vértice/índice e desenho indexado.</li>
+    <li>Infraestrutura de textura: <code>VkImage</code>, <code>VkImageView</code>, <code>VkSampler</code>, staging buffer, descriptor set layout/pool/set e barreiras.</li>
+    <li>Captura determinística de frame via <code>vkCmdCopyImageToBuffer</code> (variável <code>ASTRO_CAPTURE_FRAME</code>), contornando <code>PrintWindow</code>.</li>
+</ul>
+
+<h3>4.3. Correções críticas realizadas</h3>
+<table>
+    <tr><th>Problema</th><th>Causa</th><th>Correção aplicada</th></tr>
+    <tr><td><code>vkCreateImage</code> retornava -13</td><td><code>VkImageCreateInfo.extent</code> declarado como <code>VkExtent2D</code></td><td>Alterado para <code>VkExtent3D</code> (struct correto).</td></tr>
+    <tr><td>Access violation 0xC0000005 em <code>vkCreateGraphicsPipelines</code></td><td><code>pSpecializationInfo</code> ausente na struct de estágio</td><td>Campo adicionado e structs zeradas corretamente.</td></tr>
+    <tr><td>Shader inválido / leitura excessiva</td><td><code>codeSize</code> multiplicado por <code>sizeof(uint32_t)</code></td><td>Usado o tamanho em bytes de <code>kAstrovertSpirvSize</code> / <code>kAstrofragSpirvSize</code>.</td></tr>
+    <tr><td>Tipos Vulkan incompletos</td><td>Faltavam flags e handles</td><td>Adicionados <code>VkMemoryPropertyFlags</code>, <code>VkDescriptorSetLayout</code>, <code>VK_WHOLE_SIZE</code>.</td></tr>
+    <tr><td>Formato de profundidade</td><td>Formato anterior inadequado</td><td><code>VK_FORMAT_D24_UNORM_S8_UINT</code>.</td></tr>
+    <tr><td>Textura BC7 invisível / inválida</td><td><code>textureCompressionBC</code> não habilitado na criação do dispositivo</td><td><code>VkPhysicalDeviceFeatures</code> completo, consulta de features e <code>pEnabledFeatures</code> em <code>vkCreateDevice</code>.</td></tr>
+    <tr><td>Upload copiava apenas uma linha</td><td><code>VkBufferImageCopy.imageOffset</code> declarado como <code>VkOffset2D</code> (8 bytes) em vez de <code>VkOffset3D</code> (12 bytes), deslocando <code>imageExtent</code></td><td>Struct corrigida para <code>VkOffset3D</code>; upload passa a copiar todos os mips e a captura lê o frame inteiro.</td></tr>
+</table>
+
+<h3>4.4. Carregamento de assets</h3>
+<ul>
+    <li><code>AssetLoader::Initialize</code> localiza a raiz de dados, carrega a malha do Astro e cataloga vídeos/níveis.</li>
+    <li><code>LoadJxmd</code> tenta o parser real e usa fallback procedural quando necessário.</li>
+    <li><code>LoadGnf</code> foi reescrito para o formato real do jogo (detalhado na seção 5).</li>
+    <li>Texturas do personagem carregadas no cache: <code>astro_lowpoly_costume_d.gnfp</code> (difusa do corpo) e <code>lowpoly_eyes_single_d.gnfp</code> (olhos).</li>
+    <li>UVs lidas de <code>0x1C/0x1E</code> no vértice (half floats); a faixa validada é <code>u=[0.433, 1.0]</code>, <code>v=[0.0, 0.499]</code>. O offset anterior (<code>0x18/0x1A</code>) pertencia a outro atributo e causava UVs em <code>[-1, 1]</code>.</li>
+</ul>
+
+<h3>4.5. Integração da textura no Vulkan</h3>
+<ul>
+    <li><code>UploadTexture(const GnfTexture&amp;)</code> cria <code>VkImage</code> com o formato vindo do GNF, staging buffer, <code>vkCmdCopyBufferToImage</code> e transição <code>UNDEFINED → TRANSFER_DST → SHADER_READ_ONLY_OPTIMAL</code>.</li>
+    <li>A imagem é criada com <code>mipLevels = 12</code>; cada mip é copiado com seu próprio <code>bufferOffset</code> e <code>imageExtent</code>. O sampler usa <code>maxLod = 11</code>.</li>
+    <li><code>VkSampler</code> com filtro linear e <code>VkImageView</code> 2D cobrindo todos os níveis.</li>
+    <li>Descriptor set layout/pool/set com <code>sampler2D</code> em <code>set=0, binding=0</code>; bind no <code>BeginFrame</code>.</li>
+    <li>Shader de vértice recebe UV em <code>location 2</code> (<code>R32G32_SFLOAT</code>) e repassa <code>vUV</code>; o fragment shader combina a amostra com a iluminação existente.</li>
+    <li>SPIR-V regerado com <code>glslang</code> (vert: 1756 bytes; frag: 1896 bytes) e embutido em <code>shader_bytecode.h</code>.</li>
+</ul>
+<div class="callout success">
+    <strong>Log de validação:</strong> <code>textureCompressionBC: suportado</code>, <code>UVs da malha: u=[0.432617, 1.0] v=[0.0, 0.499023]</code> e <code>Textura enviada para GPU: astro_lowpoly_costume_d.gnfp 2048x2048 formato=146 bytes=5592432</code>.
+</div>
+
+<div class="page-break"></div>
+
+<h2>5. Formato GNF — descobertas e implementação</h2>
+<p>Os arquivos <code>.gnfp</code> do jogo usam contêiner GNF versão 4 ou 5. O cabeçalho começa com o magic <code>"GNF "</code> e o campo <code>contentsSize</code> define onde os dados de textura começam.</p>
+
+<h3>5.1. Layout do contêiner</h3>
+<table>
+    <tr><th>Offset</th><th>Campo</th><th>Observação</th></tr>
+    <tr><td><code>0x00</code></td><td><code>magic[4]</code></td><td><code>"GNF "</code> (0x20464E47 em little-endian).</td></tr>
+    <tr><td><code>0x04</code></td><td><code>contentsSize: u32</code></td><td>v4: 0x0FF8 → dados em 0x1000; v5: 0xFFF8 → dados em 0x10000.</td></tr>
+    <tr><td><code>0x08</code></td><td><code>version: u8</code></td><td>4 ou 5 nos arquivos analisados.</td></tr>
+    <tr><td><code>0x09</code></td><td><code>numTextures: u8</code></td><td>Normalmente 1.</td></tr>
+    <tr><td><code>0x0A</code></td><td><code>alignment: u8</code></td><td>Exponente de alinhamento.</td></tr>
+    <tr><td><code>0x0B</code></td><td><code>reserved: u8</code></td><td>—</td></tr>
+    <tr><td><code>0x10</code></td><td>Descritor de textura (v4)</td><td>8 dwords (0x20 bytes).</td></tr>
+    <tr><td><code>0x28</code></td><td>Descritor de textura (v5)</td><td>8 dwords (0x20 bytes).</td></tr>
+    <tr><td><code>8 + contentsSize</code></td><td>Início dos dados</td><td>Mip 0 começa aqui, em blocos comprimidos tileados.</td></tr>
+</table>
+
+<h3>5.2. Descritor de textura (8 dwords)</h3>
+<table>
+    <tr><th>Dword</th><th>Conteúdo identificado</th><th>Como interpretar</th></tr>
+    <tr><td>0</td><td>Base address / offset</td><td>Zero nos arquivos GNF.</td></tr>
+    <tr><td>1</td><td>Format ID + alinhamento</td><td><code>formatId = (reg1 &gt;&gt; 16) &amp; 0xFFFF</code>; <code>alignExp = reg1 &amp; 0xFF</code>.</td></tr>
+    <tr><td>2</td><td>Dimensões</td><td><code>widthBlocks = (reg2 &amp; 0x3FFF) + 1</code>; <code>height = ((reg2 &gt;&gt; 14) &amp; 0x3FFF) + 1</code>.</td></tr>
+    <tr><td>3</td><td>Mips, tile e tipo</td><td><code>baseLevel=(reg3&gt;&gt;12)&amp;0xF</code>; <code>lastLevel=(reg3&gt;&gt;16)&amp;0xF</code>; <code>tile=(reg3&gt;&gt;20)&amp;0x1F</code>; <code>type=(reg3&gt;&gt;28)&amp;0xF</code>.</td></tr>
+    <tr><td>4</td><td>Depth / pitch</td><td>Campos ainda não usados no carregador atual.</td></tr>
+    <tr><td>5</td><td>Base/last array</td><td>Relevante para arrays/cubemaps (não tratado ainda).</td></tr>
+    <tr><td>6</td><td>Flags de compressão / LOD</td><td>Não usado nesta fase.</td></tr>
+    <tr><td>7</td><td>Tamanho do payload</td><td>Tamanho dos dados de textura em bytes.</td></tr>
+</table>
+
+<div class="callout">
+    <strong>Dimensões para formatos BC:</strong> a largura é armazenada em <em>blocos de 4 pixels</em> e a altura em pixels. Portanto:<br>
+    <code>width = widthBlocks * 4</code> e <code>height = heightField</code>.<br>
+    Exemplo: campo 512 x 2048 → textura real 2048x2048.
+</div>
+
+<h3>5.3. Formatos observados</h3>
+<table>
+    <tr><th>Format ID</th><th>Formato</th><th>VkFormat</th><th>Bytes/bloco</th><th>Uso típico</th></tr>
+    <tr><td><code>0xCB30</code>, <code>0xCB60</code></td><td>BC7 sRGB</td><td>146 (<code>BC7_SRGB_BLOCK</code>)</td><td>16</td><td>Diffuse (<code>_d</code>)</td></tr>
+    <tr><td><code>0xCB10</code></td><td>BC7 UNORM</td><td>145 (<code>BC7_UNORM_BLOCK</code>)</td><td>16</td><td>Normal (<code>_n</code>)</td></tr>
+    <tr><td><code>0xCB50</code></td><td>BC7 UNORM</td><td>145</td><td>16</td><td>Mask</td></tr>
+    <tr><td><code>0xCAF0</code>, <code>0x8AF0</code></td><td>BC4 UNORM</td><td>139 (<code>BC4_UNORM_BLOCK</code>)</td><td>8</td><td>Roughness / AO (<code>_r</code>, <code>_ao</code>)</td></tr>
+</table>
+<p class="small">Casos raros como <code>0x8B60</code> (decals) ainda usam o fallback BC7 UNORM. <code>0x8AF0</code> é tratado como BC4 no código atual.</p>
+
+<h3>5.4. Tile mode e detile</h3>
+<p>Os tile modes observados foram <strong>9 em v5</strong> e <strong>5 em v4</strong>. Ambos se comportam como <strong>standard 64 KB</strong> nos testes visuais. O carregador atual trata qualquer <code>tileMode != 0</code> como standard 64 KB.</p>
+<p>O detile usa as equações GFX10 de 64 KB. Para blocos de 16 bytes (BC7), o bloco cobre 64x64 blocos (256x256 pixels). Para 8 bytes (BC4), cobre 128x64 blocos (512x256 pixels).</p>
+<div class="callout warning">
+    <strong>Investigação de referência (AnyPS5/FreeGNM):</strong> as equações <code>0x109</code> do AnyPS5 são <strong>thick (3D)</strong> e não se aplicam ao padrão thin 64 KB; a comparação direta feita anteriormente era inválida. O <code>kLog2BlockThin64KB</code> confirma os extents usados localmente (4 B: 128×128; 8 B: 128×64; 16 B: 64×64). O conversor <code>gnf-conv</code> do FreeGNM foi compilado, mas crasha ao ler GNF v5 (access violation), portanto não serve como validação direta. A fórmula local permanece a validada pelos previews.
+</div>
+<pre>// 16 bytes por elemento (BC7)
+off = ((x&lt;&lt;6)&amp;0x00C0) ^ ((x&lt;&lt;7)&amp;0x0200) ^ ((x&lt;&lt;8)&amp;0x0800) ^
+      ((x&lt;&lt;9)&amp;0x2000) ^ ((x&lt;&lt;10)&amp;0x8000) ^
+      ((y&lt;&lt;4)&amp;0x0030) ^ ((y&lt;&lt;6)&amp;0x0100) ^ ((y&lt;&lt;7)&amp;0x0400) ^
+      ((y&lt;&lt;8)&amp;0x1000) ^ ((y&lt;&lt;9)&amp;0x4000);
+
+// 8 bytes por elemento (BC4)
+off = ((x&lt;&lt;3)&amp;0x0008) ^ ((x&lt;&lt;5)&amp;0x00C0) ^ ((x&lt;&lt;6)&amp;0x0200) ^
+      ((x&lt;&lt;7)&amp;0x0800) ^ ((x&lt;&lt;8)&amp;0x2000) ^ ((x&lt;&lt;9)&amp;0x8000) ^
+      ((y&lt;&lt;4)&amp;0x0030) ^ ((y&lt;&lt;6)&amp;0x0100) ^ ((y&lt;&lt;7)&amp;0x0400) ^
+      ((y&lt;&lt;8)&amp;0x1000) ^ ((y&lt;&lt;9)&amp;0x4000);</pre>
+
+<h3>5.5. Dados carregados atualmente</h3>
+<p><code>GnfTexture.data</code> contém <strong>todos os mips já destilados</strong>, concatenados em ordem linear de blocos, prontos para upload direto em uma imagem Vulkan BC7/BC4. Cada nível é descrito por <code>GnfMipLevel</code> (largura, altura, offset e tamanho). Para a textura de corpo, os 12 níveis totalizam <strong>5.592.432 bytes</strong>, abaixo do payload de 5.636.096 bytes, o que confirma o empacotamento sequencial dos mips no GNF v5.</p>
+
+<div class="page-break"></div>
+
+<h2>6. Validações realizadas</h2>
+
+<h3>6.1. Build e execução</h3>
+<table>
+    <tr><th>Item</th><th>Resultado</th></tr>
+    <tr><td>Compilação</td><td>Sucesso com Clang/LLVM-MinGW UCRT.</td></tr>
+    <tr><td>Execução</td><td>Processo inicia, cria viewport e permanece estável.</td></tr>
+    <tr><td>Swapchain</td><td>714x438, 3 imagens, formato 44.</td></tr>
+    <tr><td>Pipeline</td><td>Criado com sucesso.</td></tr>
+    <tr><td>Malha</td><td>1236 vértices, 5598 índices, 8 draw ranges JXMD (5598 índices cobertos).</td></tr>
+    <tr><td>Materiais/submeshes</td><td><code>GEOM</code> fornece <code>indexOffset/indexCount</code>; <code>MESH</code> fornece o material (0–3). Filtro de debug: <code>ASTRO_DEBUG_MATERIAL</code>.</td></tr>
+    <tr><td>Primeiro frame</td><td>“Primeiro frame apresentado no viewport.” registrado em log.</td></tr>
+    <tr><td>Compressão BC</td><td><code>textureCompressionBC: suportado</code>; feature habilitada no dispositivo.</td></tr>
+    <tr><td>Upload de textura</td><td><code>astro_lowpoly_costume_d.gnfp</code>, 2048×2048, formato 146 (BC7 sRGB), 12 mips, 5.592.432 bytes.</td></tr>
+    <tr><td>Sampler</td><td><code>CLAMP_TO_EDGE</code> em U/V/W; filtro linear, mip linear e <code>maxLod=11</code>.</td></tr>
+    <tr><td>Shaders</td><td>UV + <code>sampler2D</code>; SPIR-V vert 1756 B / frag 1896 B.</td></tr>
+    <tr><td>UVs da malha</td><td><code>u=[0.4326, 1.0]</code>, <code>v=[0.0, 0.4990]</code>; half-floats em <code>0x1C/0x1E</code>.</td></tr>
+    <tr><td>Captura de frame</td><td>BMP 714×438 gerado via <code>vkCmdCopyImageToBuffer</code>; modelo e textura visíveis no frame.</td></tr>
+</table>
+
+<h3>6.2. Testes do parser GNF</h3>
+<table>
+    <tr><th>Arquivo</th><th>Dimensões</th><th>Mips no arquivo</th><th>Formato</th><th>Tile</th><th>Mip 0</th></tr>
+    <tr><td><code>arbot_eyes_single_red_d.gnfp</code></td><td>2048x2048</td><td>12</td><td>BC7</td><td>9</td><td>4096 KB</td></tr>
+    <tr><td><code>bnd_tex_rock_d.gnfp</code></td><td>512x512</td><td>10</td><td>BC7 sRGB</td><td>5</td><td>256 KB</td></tr>
+    <tr><td><code>aerial_aquarium_fish_grate_ao.gnfp</code></td><td>1024x1024</td><td>11</td><td>BC4</td><td>9</td><td>512 KB</td></tr>
+</table>
+<p>Além dos metadados, foram gerados previews temporários com decodificação BC7 e detile 64 KB. O resultado visual do <code>bnd_tex_rock_d</code> apresenta a textura de rocha coerente; os demais previews também exibem conteúdo coerente, confirmando dimensões, formato e layout de tile.</p>
+
+<h3>6.3. Investigação do detile e do suporte BC7</h3>
+<ul>
+    <li><strong>AnyPS5:</strong> as equações do modo <code>0x109</code> são thick/3D; <code>EquationSwizzleMode(kStandard64KB)</code> retorna 0. Não existe equação thin standard 64 KB nessa referência, então a comparação anterior não era aplicável.</li>
+    <li><strong>FreeGNM:</strong> clonado e compilado como referência; o <code>gnf-conv</code> crasha com GNF v5 (exit <code>-1073741819</code>, access violation), sem gerar PNG. Não foi possível usá-lo para validar o arquivo analisado.</li>
+    <li><strong>Vulkan:</strong> identificado que <code>VkDeviceCreateInfo</code> não passava <code>pEnabledFeatures</code>. Corrigido com <code>VkPhysicalDeviceFeatures</code> completo, carregamento de <code>vkGetPhysicalDeviceFeatures</code> e habilitação de <code>textureCompressionBC</code>.</li>
+    <li><strong>Layout de <code>VkBufferImageCopy</code>:</strong> o campo <code>imageOffset</code> usava <code>VkOffset2D</code>; o driver interpretava <code>imageExtent</code> deslocado e copiava apenas uma linha (2048×1) da textura. Corrigido para <code>VkOffset3D</code>, permitindo o upload completo dos 12 mips e a captura do frame inteiro.</li>
+    <li><strong>Cadeia de mips:</strong> os tamanhos lineares dos 12 níveis somam 5.592.432 bytes e o payload tem 5.636.096 bytes; os níveis são sequenciais e o detile de cada mip foi validado pela captura com mip chain ativa.</li>
+    <li><strong>Submeshes/materiais JXMD:</strong> o chunk <code>GEOM</code> fornece <code>indexOffset</code> e <code>indexCount</code> por draw; o chunk <code>MESH</code> fornece o índice de material (0–3). A soma dos 8 ranges é exatamente 5.598 índices. O filtro <code>ASTRO_DEBUG_MATERIAL</code> isola um material para inspeção visual.</li>
+</ul>
+
+<div class="callout success">
+    <strong>Validação visual determinística:</strong> <code>ASTRO_CAPTURE_FRAME=1</code> gera <code>astro_frame_capture.bmp</code> lendo a imagem da swapchain na GPU. O frame contém o modelo do Astro com a textura difusa do corpo (<code>astro_lowpoly_costume_d</code>) aplicada, confirmando upload, descritor, sampler e UVs.
+</div>
+
+<h2>7. Limitações atuais</h2>
+<ul>
+    <li>O corpo já usa a textura difusa correta, os UVs estão em <code>[0,1]</code> e os 8 ranges/4 materiais JXMD são desenhados separadamente; porém o mapeamento material→textura ainda não foi resolvido, então a textura de olhos está carregada no cache mas não é aplicada às partes correspondentes.</li>
+    <li>O mip 0 e a cadeia completa são carregados, porém a validação de cada nível é apenas por contagem/tamanho e captura; ainda não há comparação pixel a pixel com um decodificador de referência.</li>
+    <li>Não há escolha de sampler por material (wrap, filtro, anisotropia) nem suporte a múltiplos mapas (normal, roughness, AO, mask); o sampler atual é global em <code>CLAMP_TO_EDGE</code>.</li>
+    <li>Arrays, cubemaps e casos raros de format ID (<code>0x8B60</code>, decals) não foram validados a fundo.</li>
+    <li>A malha JXMD real ainda não substituiu totalmente o fallback procedural.</li>
+    <li>O tile mode <code>5</code>/<code>9</code> é tratado como standard 64 KB; o mapeamento exato para o enum GnmTileMode ainda não foi confirmado, embora os previews e a captura sustentem a fórmula atual.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h2>8. Próximos passos recomendados</h2>
+<ol>
+    <li><strong>Mapear materiais para texturas:</strong> os ranges de índice e o material (0–3) já são extraídos do <code>GEOM</code>/<code>MESH</code>; falta associar cada material às texturas <code>astro_lowpoly_costume_d</code>, <code>astro_lowpoly_costume_e</code> e <code>lowpoly_eyes_single_d</code> (e futuramente normal/roughness).</li>
+    <li><strong>Refinar sampler por material:</strong> o atlas atual usa <code>CLAMP_TO_EDGE</code>; adicionar anisotropia e permitir <code>REPEAT</code> apenas nos materiais que exigem tile.</li>
+    <li><strong>Suportar múltiplos mapas do material:</strong> diffuse (BC7 sRGB), normal (BC7 UNORM), roughness/AO (BC4), com descritores e combinação no fragment shader.</li>
+    <li><strong>Consolidar a malha JXMD real</strong> e validar o conjunto de atributos (posição, normal, UV, tangente) contra os shaders.</li>
+    <li><strong>Adicionar validação de camadas Vulkan</strong> para checar descritores, layouts e sincronização em builds de debug.</li>
+    <li><strong>Evoluir para arrays/cubemaps</strong> e mapear os format IDs restantes (<code>0x8B60</code> e variantes).</li>
+</ol>
+<div class="callout success">
+    <strong>Marco atual:</strong> textura difusa BC7 com 12 mips carregada, UVs validados em <code>[0,1]</code>, sampler <code>CLAMP_TO_EDGE</code>, 8 draw ranges/4 materiais JXMD e captura confirmando o corpo branco/azul com a textura correta. O próximo foco é o mapeamento material→textura e a validação com camadas Vulkan.
+</div>
+
+<h2>9. Arquivos relevantes</h2>
+<table>
+    <tr><th>Caminho</th><th>Papel</th></tr>
+    <tr><td><code>src/assets/asset_loader.cpp</code></td><td>Parser GNF v4/v5, classificação de formato e detile do mip 0.</td></tr>
+    <tr><td><code>src/assets/asset_loader.h</code></td><td>Estruturas <code>GnfHeader</code>, <code>GnfSurfaceInfo</code> e <code>GnfTexture</code>.</td></tr>
+    <tr><td><code>src/gpu/vulkan_backend.cpp</code></td><td>Swapchain, render pass, pipeline, buffers, draw e logs Vulkan.</td></tr>
+    <tr><td><code>src/gpu/vulkan_backend.h</code></td><td>API do backend e membros de estado Vulkan.</td></tr>
+    <tr><td><code>src/gpu/vulkan_types.h</code></td><td>Subconjunto de tipos Vulkan usado pelo projeto (formatos BC4/BC7).</td></tr>
+    <tr><td><code>src/gpu/vulkan_loader.h / .cpp</code></td><td>Carregamento dinâmico de <code>vulkan-1.dll</code>, incluindo <code>vkGetPhysicalDeviceFeatures</code>.</td></tr>
+    <tr><td><code>src/gpu/shader_bytecode.h</code></td><td>SPIR-V embutido de <code>astro.vert</code> e <code>astro.frag</code> (UV + sampler).</td></tr>
+    <tr><td><code>src/gpu/shaders/astro.vert</code></td><td>Shader de vértice com posição/normal e UV (<code>location 2</code>).</td></tr>
+    <tr><td><code>src/gpu/shaders/astro.frag</code></td><td>Shader de fragmento com amostragem <code>sampler2D</code> + iluminação.</td></tr>
+    <tr><td><code>src/assets/jxmd_parser.cpp/.h</code></td><td>Parser de malha JXMD e estrutura <code>JxmdVertex</code> (inclui UV).</td></tr>
+    <tr><td><code>src/main.cpp</code></td><td>Janela, viewport filho, integração de UI e chamadas ao backend.</td></tr>
+    <tr><td><code>build_clang.bat</code></td><td>Build oficial do executável.</td></tr>
+</table>
+
+<h2>10. Comandos e logs</h2>
+<pre>Build:
+  cd "C:\Users\italo\Desktop\recombilação jogo ps5"
+  cmd /c build_clang.bat
+
+Execução:
+  build\clang\AstroBot_PC.exe
+
+Logs:
+  astro_launch.log
+  vulkan_backend.log
+
+Dados do jogo:
+  D:\Games\abaixar\jogo\PPSA21567\data
+
+Validação esperada no log Vulkan:
+  [VulkanBackend] textureCompressionBC: suportado
+  [VulkanBackend] Textura enviada para GPU: ... formato=146
+
+Captura determinística de frame (Windows PowerShell):
+  $env:ASTRO_CAPTURE_FRAME='1'
+  build\clang\AstroBot_PC.exe
+  # gera astro_frame_capture.bmp no diretório de trabalho</pre>
+
+<h2>11. Observações para a próxima sessão</h2>
+<ul>
+    <li>O parser GNF já está estável para v4/v5 e para os formatos BC7/BC4 observados.</li>
+    <li>O detile de 64 KB foi validado visualmente; não voltar a tratar os dados como RGBA linear.</li>
+    <li>As equações <code>0x109</code> do AnyPS5 são thick/3D; não usar como referência para thin standard 64 KB.</li>
+    <li>Dimensões nunca devem ser inferidas pelo tamanho do arquivo: usar o descritor.</li>
+    <li>Compressão BC precisa estar habilitada via <code>pEnabledFeatures</code>; sem isso, imagens BC7 podem ser inválidas.</li>
+    <li><code>VkBufferImageCopy.imageOffset</code> é <code>VkOffset3D</code> (12 bytes); não reduzir para <code>VkOffset2D</code>, pois isso desalinha <code>imageExtent</code> e corrompe uploads/capturas.</li>
+    <li>O <code>gnf-conv</code> do FreeGNM não é referência para GNF v5 (crasha); usar os previews locais e o parser atual.</li>
+    <li>Usar <code>ASTRO_CAPTURE_FRAME=1</code> para validar o viewport sem depender de <code>PrintWindow</code>.</li>
+    <li>Manter o fallback de formato BC7 UNORM para IDs desconhecidos até mapear todos os casos.</li>
+    <li>O próximo marco verificável é: mapeamento material→textura (corpo/olhos) e validação com camadas Vulkan; ranges/submeshes já são extraídos e o sampler do atlas está em <code>CLAMP_TO_EDGE</code>.</li>
+</ul>
+
+<div class="footer">
+    Relatório atualizado em 23/10/2026 — Projeto ASTRO BOT PC / PPSA21567.<br>
+    Documento de handoff técnico para continuidade do desenvolvimento.
+</div>
+
+</body>
+</html>

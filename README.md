@@ -1,11 +1,111 @@
-## 🚀 Projeto Atual & Destaque Técnico
+# AstroPort — ASTRO BOT no PC (PPSA21567)
 
-### 🎮 Astro Bot (PC Port via AnyPS5)
-Atualmente estou trabalhando na continuidade da compilação e otimização do **ASTRO BOT** (`PPSA21567`) no emulador **AnyPS5**.
+Projeto de porte/pesquisa do **ASTRO BOT (PS5, PPSA21567)** com pipeline próprio em
+C++: inspeção e reconstrução de containers SELF, mapeamento de ELF64, relocations,
+camada de runtime e renderização. Nada é executado sem que a estrutura do binário
+seja entendida e validada — a política do projeto é **fail-closed** desde o início.
 
-- 🎯 **Status Atual:** Crash de alocação de GPU resolvido; o jogo carrega e roda com sucesso até a tela de título[cite: 1].
-- 🛠️ **Foco de Otimização:** 
-  - Redução de custo de CPU nos commits através do ajuste de pipeline de draws (`APS5_PIPELINED_DRAWS=32`, reduzindo de 594µs para 121µs por commit)[cite: 1].
-  - Análise de profilers e gargalos de concorrência/esperas de labels (`WAIT_REG_MEM` nas filas de compute/queue 0)[cite: 1].
-  - Otimização de importação de memória host (`APS5_HOST_IMPORT_MIB=6144`)[cite: 1].
-- 🧰 **Tech Stack & Ferramentas:** C++, Vulkan, GCC 15, Ninja Build, PowerShell Benchmarking Harness, GPU Profiling[cite: 1, 2].
+> Este repositório **não contém** dumps do jogo (nem `eboot.bin`, nem `*.prx`) por
+> questões de direitos autorais. Todo diagnóstico usa apenas arquivos locais do
+> próprio usuário, em modo somente-leitura.
+
+## Estado atual do pipeline próprio
+
+| Etapa | Estado |
+|---|---|
+| Leitura de ELF64 direto (metadados, PT_LOAD, PT_DYNAMIC) | ✅ implementado |
+| Inspeção de container SELF (tabela de registros 0x40..0x400, flags, entropia) | ✅ implementado |
+| Reconstrução SELF→ELF64 (dumps não criptografados, fail-closed) | ✅ implementado |
+| Mapeamento da imagem virtual a partir dos PT_LOAD | ✅ implementado |
+| Relocations `R_X86_64_RELATIVE` (tipo 8, sym 0) | ✅ implementado |
+| Resolução de imports / NIDs (≈2.930 referências pendentes) | ⏳ próxima etapa |
+| Execução / runtime PS5 | ❌ recusada por design |
+
+### Regras de reconstrução SELF→ELF (implementação própria)
+
+Sem copiar código de terceiros (conceito absorvido do ecossistema AnyPS5/PortPS5,
+implementação independente em C++):
+
+1. **Registros cobertos** (flag `0x800`, índice em `flags >> 20`): bytes copiados
+   verbatim da posição do registro no container; `p_offset` reapontado de forma
+   congruente com `p_vaddr` módulo page-alignment.
+2. **Segmentos internos não cobertos** (PT_GNU_EH_FRAME, PT_GNU_RELRO, PT_TLS,
+   PT_NOTE/PT_DYNAMIC internos): resolvidos pela relação vaddr→arquivo do PT_LOAD
+   que os contém (sem duplicação de dados).
+3. **Segmentos restantes sem vaddr** após o último registro: copiados em sequência.
+4. **Container que termina após o último registro**: segmentos de metadados
+   restantes são emitidos sem bytes de arquivo (comportamento documentado); um
+   `PT_LOAD` nessa situação é **recusado**.
+
+**Recusas fail-closed:** flags de criptografia (`0x2`) ou compressão (`0x8`),
+entropia ≥ 7,5 bits/byte em payload mapeado, tamanho de registro ≠ `p_filesz`,
+índice de segmento inválido, ou qualquer estrutura não explicada pelas regras.
+
+### Validação
+
+- Suite de testes (CTest): **7/7 passando**, incluindo `self_inspection_validation`
+  e `self_reconstruction_validation` (fixtures sintéticos + 5 casos de recusa).
+- Diagnóstico em dump real (somente leitura): `eboot.bin` de 259.312.583 bytes
+  reconstruído em imagem ELF64 de **258.866.503 bytes**, 14 program headers
+  (6 de registros, 6 via PT_LOAD, 1 trailing, 1 sem dados), auto-validado pelo
+  próprio parser e mapeado em imagem virtual de **270.609.168 bytes**.
+
+## Build
+
+Requer CMake 3.20+, Ninja e LLVM-MinGW (Clang) no PATH — ou MSVC.
+
+```bat
+build_clang.bat
+```
+
+Ou manualmente:
+
+```bat
+cmake -S . -B build\clang -G Ninja -DCMAKE_C_COMPILER=clang.exe -DCMAKE_CXX_COMPILER=clang++.exe
+cmake --build build\clang --target AstroBotPC
+ctest --test-dir build\clang --output-on-failure
+```
+
+Ferramentas de diagnóstico:
+
+```bat
+build\clang\diag_eboot.exe <caminho\eboot.bin> [saida-reconstruida.elf]
+```
+
+O segundo argumento é opcional: sem ele, a reconstrução é feita apenas em memória
+(análise), sem gravar nada.
+
+## Relatórios
+
+- `Relatorio_Completo_AstroBot_PC.html` / `.pdf` — relatório canônico de progresso
+  (todas as etapas, decisões e medições reais). O PDF é regerado com
+  `generate_pdf.bat`.
+- `RELATORIO_PORTE_ASTRO_BOT_ANYPS5.*` — experimento histórico com o ecossistema
+  AnyPS5 (relinker/PRX) usado como referência, não como runtime.
+- `Relatorio_Status_AstroBot_PC.*` e `RELATORIO_CONTINUIDADE_PERFORMANCE.pdf` —
+  relatórios anteriores de status/performance.
+
+## Terceiros e licenças
+
+- **LibAtrac9** (MIT) — decodificação ATRAC9; ver `THIRD_PARTY_NOTICES.txt`.
+- **`AnyPS5/unwrap_self.py`** — script do AnyPS5 (GPL-2.0), mantido **sem
+  modificações** apenas como ferramenta externa reproduzível; notas de
+  proveniência e licença em `AnyPS5/LICENCA_E_PROVENIENCIA.txt`. Nenhum código
+  GPL é derivado no núcleo do AstroPort.
+- O binário `relinker.exe` (GPL-2.0) **não é versionado**; foi validado por hash
+  na release oficial e o procedimento está em `AnyPS5/Relinkar_AstroBot.bat`.
+
+## Aviso
+
+Este projeto é de pesquisa e engenharia reversa estrutural com fins educacionais.
+Não distribui, descriptografa nem contorna proteções de conteúdo: a reconstrução
+SELF→ELF só aceita containers **já descriptografados** e recusa qualquer payload
+com marcação ou entropia de criptografia. Nenhum código do jogo é executado.
+
+## Histórico (experimentos anteriores com AnyPS5)
+
+Trabalho anterior documentado nos relatórios: conversão do dump para executável
+Windows via relinker do AnyPS5 (2.930 imports NID analisados, 2 módulos PRX
+convertidos), com crash de alocação de GPU resolvido e carregamento até a tela de
+título em ambiente de teste. Essa linha foi mantida apenas como referência
+técnica; o desenvolvimento ativo é o pipeline próprio descrito acima.
