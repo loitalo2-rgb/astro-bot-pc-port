@@ -18,6 +18,8 @@ seja entendida e validada — a política do projeto é **fail-closed** desde o 
 | Reconstrução SELF→ELF64 (dumps não criptografados, fail-closed) | ✅ implementado |
 | Mapeamento da imagem virtual a partir dos PT_LOAD | ✅ implementado |
 | Relocations `R_X86_64_RELATIVE` (tipo 8, sym 0) | ✅ implementado |
+| Censo offline de assets (GNF/JXMD/SELF/ELF/SPIR-V) | ✅ implementado |
+| Tabela central de formatos GNF→Vulkan (fail-closed p/ IDs desconhecidos) | ✅ implementado |
 | Resolução de imports / NIDs (≈2.930 referências pendentes) | ⏳ próxima etapa |
 | Execução / runtime PS5 | ❌ recusada por design |
 
@@ -43,12 +45,16 @@ entropia ≥ 7,5 bits/byte em payload mapeado, tamanho de registro ≠ `p_filesz
 
 ### Validação
 
-- Suite de testes (CTest): **7/7 passando**, incluindo `self_inspection_validation`
-  e `self_reconstruction_validation` (fixtures sintéticos + 5 casos de recusa).
+- Suite de testes (CTest): **8/8 passando**, incluindo `self_inspection_validation`,
+  `self_reconstruction_validation` (fixtures sintéticos + 5 casos de recusa) e
+  `asset_census_validation` (GNF/JXMD/SELF/ELF/SPIR-V, formatos mapeados e não mapeados).
 - Diagnóstico em dump real (somente leitura): `eboot.bin` de 259.312.583 bytes
   reconstruído em imagem ELF64 de **258.866.503 bytes**, 14 program headers
   (6 de registros, 6 via PT_LOAD, 1 trailing, 1 sem dados), auto-validado pelo
   próprio parser e mapeado em imagem virtual de **270.609.168 bytes**.
+- Censo offline do dump (leitura apenas, cabeçalhos): **166.717 arquivos / 148,83 GiB**
+  em 56 s; 28.949 texturas GNF (110,20 GiB, todas válidas) e 15.503 malhas JXMD
+  (26,18 GiB, incluindo 170 arquivos `.jmt` reconhecidos pelo magic).
 
 ## Build
 
@@ -74,6 +80,14 @@ build\clang\diag_eboot.exe <caminho\eboot.bin> [saida-reconstruida.elf]
 
 O segundo argumento é opcional: sem ele, a reconstrução é feita apenas em memória
 (análise), sem gravar nada.
+
+```bat
+build\clang\diag_census.exe <raiz-do-dump> [censo.csv]
+```
+
+O censo lê apenas os cabeçalhos (até 96 bytes por arquivo): classifica GNF, JXMD,
+SELF, ELF64 e SPIR-V, agrega formatos/tamanhos e nunca decodifica payload. O CSV
+opcional lista cada container reconhecido com <code>path,size,kind,valid,detail</code>.
 
 ## Relatórios
 

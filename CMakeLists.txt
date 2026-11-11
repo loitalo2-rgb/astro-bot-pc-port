@@ -55,6 +55,8 @@ add_library(AstroBotCore STATIC
     src/core/dispatch_table.cpp
     src/assets/asset_loader.cpp
     src/assets/jxmd_parser.cpp
+    src/assets/asset_census.cpp
+    src/assets/gnf_format.cpp
     src/gameplay/level_collision.cpp
     src/common/types.h
     src/stubs/sce_stubs.h
@@ -113,6 +115,15 @@ add_executable(test_tex_load src/test_tex_load.cpp)
 target_link_libraries(test_tex_load PRIVATE AstroBotCore)
 target_include_directories(test_tex_load PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(test_asset_census src/test_asset_census.cpp)
+target_link_libraries(test_asset_census PRIVATE AstroBotCore)
+target_include_directories(test_asset_census PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME asset_census_validation COMMAND test_asset_census)
+
+add_executable(diag_census src/diag_census.cpp)
+target_link_libraries(diag_census PRIVATE AstroBotCore)
+target_include_directories(diag_census PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(test_audio_at9 src/test_audio_at9.cpp)
 target_link_libraries(test_audio_at9 PRIVATE AstroBotCore)
 target_include_directories(test_audio_at9 PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -148,7 +159,9 @@ if(WIN32)
         diag_eboot
         diag_assets
         diag_gnf
+        diag_census
         test_tex_load
+        test_asset_census
         test_audio_at9
         test_gameplay_movement
         test_level_collision

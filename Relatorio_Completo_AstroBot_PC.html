@@ -223,6 +223,33 @@
         <li><strong>Recomendação:</strong> adotar agora as ideias 1, 2, 3 e 7 (camadas formalizadas, gravador de comandos gráficos, censo offline de shaders/assets e nota de falha + teste por sintoma). As ideias 4 e 5 entram junto com o cache de assets e com o primeiro código de jogo executável; a 6 só na etapa de distribuição. O Hookshot confirma que a arquitetura do AstroPort está na direção certa — o que falta nele (tradução de ISA) é exatamente o que o PS5 não precisa.</li>
     </ul>
 
+    <h2>Etapa — censo offline de assets (leitura apenas, base para o renderer e para o cache)</h2>
+    <ul>
+        <li><strong>Motivo:</strong> aplicar a ideia 3 do Hookshot (censo antes de traduzir) sem executar o jogo. Até agora o projeto conhecia <em>seis</em> malhas JXMD do hub; o dump tem dezenas de milhares de containers. O censo mede o que existe de fato, com que formatos, tamanhos e variantes, para dimensionar decodificadores e corpus de teste.</li>
+        <li><strong>Implementação (própria, C++):</strong>
+            <ul>
+                <li><code>src/assets/asset_census.*</code> — classificação por cabeçalho fixo de GNF, JXMD, SELF, ELF64 e SPIR-V; valida limites contra o tamanho real do arquivo; nunca lê payload.</li>
+                <li><code>src/assets/gnf_format.*</code> — tabela central de formatos GNF→Vulkan, compartilhada pelo loader e pelo censo (impede que os dois divirjam).</li>
+                <li><code>src/diag_census.cpp</code> — percorre a árvore, lê no máximo 96 bytes por arquivo, agrega por container/formato/extensão e opcionalmente grava CSV (<code>path,size,kind,valid,detail</code>).</li>
+                <li><code>src/test_asset_census.cpp</code> — CTest <code>asset_census_validation</code>: cabeçalhos sintéticos GNF v4/v5 (BC4, BC7, formato não mapeado, truncado/fora do arquivo), JXMD válido e com chunk além do EOF, ELF64, SELF, SPIR-V, dados desconhecidos e entradas degeneradas.</li>
+            </ul>
+        </li>
+        <li><strong>Resultado no dump real PPSA21567 (somente leitura):</strong>
+            <ul>
+                <li><strong>166.717 arquivos</strong>, <strong>148,83 GiB</strong>, <strong>0 ilegíveis</strong>; 105 s na primeira passada (cache frio) e 56 s na segunda.</li>
+                <li><strong>GNF:</strong> 28.949 texturas, 110,20 GiB, <strong>todas com cabeçalho válido</strong>; versões v4 = 140, v5 = 28.809; dimensões de 4×2 até 4172×4096; payload somado de 111.067 MiB; até 13 níveis de mip; tile modes 5 (472) e 9 (28.477) — ou seja, <strong>todas as texturas são tiled</strong>, o que valida o caminho de decodificação por blocos já existente.</li>
+                <li><strong>Distribuição de formatos:</strong> 0xCAF0 = 13.202 (BC4), 0xCB60 = 9.695 (BC7 sRGB), 0xCB10 = 4.847 (BC7 UNORM, normais), 0xCB50 = 719 (BC7 UNORM, máscaras), 0xCB30 = 457 (BC7 sRGB), 0xCAA0 = 2 (BC1 sRGB, nome do arquivo confirma <code>*_bc1s</code>), 0x8B60 = 3 (BC7 sRGB), 0x8AF0 = 1 (BC4).</li>
+                <li><strong>23 texturas em 7 IDs sem decodificador</strong> (0x0B50=1, 0x0B60=4, 0x4AF0=3, 0x4B50=1, 0x4B60=4, 0xC380=3, 0xCA90=7) — 0,08% do total.</li>
+                <li><strong>JXMD:</strong> 15.503 containers (26,18 GiB) — mais que os 15.333 arquivos <code>.jxm</code>, porque <strong>170 arquivos <code>.jmt</code> também são JXMD</strong> (confirmado pelo magic, não pela extensão). Strides: 48 = 14.866 (dominante), 36 = 620, 40 = 16, 32 = 1; soma de elementos de chunk = 215.783.</li>
+                <li><strong>Outros volumes:</strong> <code>.anim</code> 61.160 (1,86 GiB), <code>.odxb</code> 19.957 (55 MiB), <code>.szd</code> 12.705 (3,72 GiB), <code>.pfbhk</code> 8.755 (3,63 GiB), <code>.skel</code> 7.346, <code>.jpx</code> 3.476, <code>.lvx</code> 2.474 — candidatos naturais ao próximo censo (áudio, animação, esqueleto, nível).</li>
+                <li><strong>SELF:</strong> 3 containers no dump (eboot + 2 PRX), coerente com a etapa de reconstrução.</li>
+            </ul>
+        </li>
+        <li><strong>Mudança de comportamento fail-closed:</strong> antes, <code>LoadGnf</code> rotulava qualquer formato não-BC4 como BC7 UNORM — um default silencioso que decodificaria lixo com o bloco errado. Agora ele consulta a tabela central e <strong>recusa</strong> IDs desconhecidos com log explícito (23 texturas afetadas, 0,08%), em vez de adivinhar. Formatos confirmados: BC4 (0xCAF0/0x8AF0), BC7 UNORM (0xCB10/0xCB50), BC7 sRGB (0xCB30/0xCB60/0x8B60) e BC1 sRGB (0xCAA0).</li>
+        <li><strong>Testes:</strong> <code>asset_census_validation</code> adicionado; suíte agora em <strong>8/8 testes passando</strong>, build sem novos warnings.</li>
+        <li><strong>Próximo uso do censo:</strong> (a) gerar um corpus de teste por formato a partir de arquivos reais, sem executar o jogo; (b) dimensionar o decodificador de <code>.szd</code>/<code>.anim</code>/<code>.skel</code>; (c) servir de base para o gravador de comandos gráficos (ideia 2 do Hookshot), que precisa saber quais texturas e formatos os draws referenciam.</li>
+    </ul>
+
     <h2>Próximos Passos Estratégicos</h2>
     <ol>
         <li><strong>Integração das relocations ao pipeline de ELF cru:</strong> Conectar o fluxo <code>ParseElf64Metadata</code> → <code>MapElf64LoadSegments</code> → <code>ApplyElf64RelativeRelocations</code> ao caminho do loader para ELF cru de autoria/uso autorizado, substituindo a interrupção hardcoded em <code>ProcessRelocations()</code>, com logs honestos por etapa. Relocations simbólicas/PLT continuam dependentes de <code>DT_SYMTAB/DT_STRTAB</code> e de uma tabela de imports autorizada do jogo.</li>

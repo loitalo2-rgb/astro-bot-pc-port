@@ -1,4 +1,5 @@
 #include "asset_loader.h"
+#include "gnf_format.h"
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -207,8 +208,15 @@ bool AssetLoader::LoadGnf(const std::string& filePath, GnfTexture& outTexture) {
     const uint32_t tileMode = (reg3 >> 20) & 0x1Fu;
     const uint32_t formatId = (reg1 >> 16) & 0xFFFFu;
 
-    const bool isBc4 = (formatId == 0xCAF0u || formatId == 0x8AF0u);
-    const uint32_t blockBytes = isBc4 ? 8u : 16u;
+    const GnfFormatInfo format = LookupGnfFormat(formatId);
+    if (!format.known || !format.blockCompressed) {
+        std::cerr << "[AssetLoader] GNF com formato 0x" << std::hex << formatId
+                  << std::dec << " (" << format.name
+                  << ") nao mapeado; carga recusada em vez de adivinhar: "
+                  << filePath << "\n";
+        return false;
+    }
+    const uint32_t blockBytes = format.blockBytes;
 
     outTexture.name = fs::path(filePath).filename().string();
     outTexture.width = widthBlocks * 4u;
@@ -219,17 +227,8 @@ bool AssetLoader::LoadGnf(const std::string& filePath, GnfTexture& outTexture) {
     outTexture.bytesPerBlock = blockBytes;
     outTexture.formatId = formatId;
     outTexture.dataOffset = dataOffset;
-
-    if (isBc4) {
-        outTexture.formatName = "BC4_UNORM (GNF PS5)";
-        outTexture.vulkanFormat = 139; // VK_FORMAT_BC4_UNORM_BLOCK
-    } else if (formatId == 0xCB30u || formatId == 0xCB60u) {
-        outTexture.formatName = "BC7_SRGB (GNF PS5)";
-        outTexture.vulkanFormat = 146; // VK_FORMAT_BC7_SRGB_BLOCK
-    } else {
-        outTexture.formatName = "BC7_UNORM (GNF PS5)";
-        outTexture.vulkanFormat = 145; // VK_FORMAT_BC7_UNORM_BLOCK
-    }
+    outTexture.formatName = format.name;
+    outTexture.vulkanFormat = format.vulkanFormat;
 
     const bool tiled = (tileMode != 0u);
     const TileBlock tileBlock = Standard64kBlock(blockBytes);
