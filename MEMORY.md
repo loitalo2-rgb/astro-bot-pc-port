@@ -1,0 +1,1 @@
+- [Progresso e Status do Projeto (2026-11-08)](estado-projeto-atual.md) — análise de port nativo vs emulação e mapeamento de hooks
