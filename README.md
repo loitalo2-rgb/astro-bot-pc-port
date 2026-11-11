@@ -47,7 +47,8 @@ entropia ≥ 7,5 bits/byte em payload mapeado, tamanho de registro ≠ `p_filesz
 
 - Suite de testes (CTest): **8/8 passando**, incluindo `self_inspection_validation`,
   `self_reconstruction_validation` (fixtures sintéticos + 5 casos de recusa) e
-  `asset_census_validation` (GNF/JXMD/SELF/ELF/SPIR-V, formatos mapeados e não mapeados).
+  `asset_census_validation` (GNF/JXMD/SELF/ELF/SPIR-V, formatos mapeados e não mapeados,
+  geometria de tile e layout de mips GNF).
 - Diagnóstico em dump real (somente leitura): `eboot.bin` de 259.312.583 bytes
   reconstruído em imagem ELF64 de **258.866.503 bytes**, 14 program headers
   (6 de registros, 6 via PT_LOAD, 1 trailing, 1 sem dados), auto-validado pelo
@@ -55,6 +56,12 @@ entropia ≥ 7,5 bits/byte em payload mapeado, tamanho de registro ≠ `p_filesz
 - Censo offline do dump (leitura apenas, cabeçalhos): **166.717 arquivos / 148,83 GiB**
   em 56 s; 28.949 texturas GNF (110,20 GiB, todas válidas) e 15.503 malhas JXMD
   (26,18 GiB, incluindo 170 arquivos `.jmt` reconhecidos pelo magic).
+- Validação de layout GNF (leitura apenas): **28.949 arquivos em 9,5 s**, 0 cabeçalhos
+  inválidos e 0 payloads passando do fim do container. Invariante confirmado em 100%
+  do dump: o payload declarado nunca é menor que a soma linear dos mips. A regra exata
+  de padding por formato ainda não é assumida; o loader só recusa o que viola o
+  invariante. O validador gera um **manifesto de corpus com 71 representantes**
+  (formato/tile/versão/mips + FNV-1a 64 dos primeiros 1 MiB), sem copiar bytes do jogo.
 
 ## Build
 
@@ -88,6 +95,17 @@ build\clang\diag_census.exe <raiz-do-dump> [censo.csv]
 O censo lê apenas os cabeçalhos (até 96 bytes por arquivo): classifica GNF, JXMD,
 SELF, ELF64 e SPIR-V, agrega formatos/tamanhos e nunca decodifica payload. O CSV
 opcional lista cada container reconhecido com <code>path,size,kind,valid,detail</code>.
+
+```bat
+build\clang\diag_gnf_validate.exe <raiz-do-dump> [manifesto-corpus.csv]
+```
+
+Valida a cadeia de mips e o tiling de cada GNF a partir do cabeçalho, compara o
+payload declarado com três hipóteses de tamanho (linear, mips alinhados a 64 KiB e
+total arredondado a 64 KiB) e relata arquivos cuja leitura passaria do fim do
+container. O CSV opcional é um manifesto de corpus (caminho, formato, dimensões,
+payload, estimativas e hash FNV-1a dos primeiros 1 MiB) — apenas metadados, nunca
+bytes proprietários.
 
 ## Relatórios
 

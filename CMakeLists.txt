@@ -57,6 +57,7 @@ add_library(AstroBotCore STATIC
     src/assets/jxmd_parser.cpp
     src/assets/asset_census.cpp
     src/assets/gnf_format.cpp
+    src/assets/gnf_layout.cpp
     src/gameplay/level_collision.cpp
     src/common/types.h
     src/stubs/sce_stubs.h
@@ -124,6 +125,10 @@ add_executable(diag_census src/diag_census.cpp)
 target_link_libraries(diag_census PRIVATE AstroBotCore)
 target_include_directories(diag_census PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(diag_gnf_validate src/diag_gnf_validate.cpp)
+target_link_libraries(diag_gnf_validate PRIVATE AstroBotCore)
+target_include_directories(diag_gnf_validate PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
 add_executable(test_audio_at9 src/test_audio_at9.cpp)
 target_link_libraries(test_audio_at9 PRIVATE AstroBotCore)
 target_include_directories(test_audio_at9 PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -160,6 +165,7 @@ if(WIN32)
         diag_assets
         diag_gnf
         diag_census
+        diag_gnf_validate
         test_tex_load
         test_asset_census
         test_audio_at9

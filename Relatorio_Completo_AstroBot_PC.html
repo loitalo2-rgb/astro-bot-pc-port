@@ -250,6 +250,25 @@
         <li><strong>Próximo uso do censo:</strong> (a) gerar um corpus de teste por formato a partir de arquivos reais, sem executar o jogo; (b) dimensionar o decodificador de <code>.szd</code>/<code>.anim</code>/<code>.skel</code>; (c) servir de base para o gravador de comandos gráficos (ideia 2 do Hookshot), que precisa saber quais texturas e formatos os draws referenciam.</li>
     </ul>
 
+    <h2>Etapa — validação de layout GNF e corpus de teste por formato (leitura apenas)</h2>
+    <ul>
+        <li><strong>Objetivo:</strong> transformar o censo em garantia de decodificação. Antes de gerar o corpus, era preciso saber se o número de bytes declarado no GNF confere com a cadeia de mips calculada a partir do cabeçalho — e qual regra de tiling o dump realmente usa.</li>
+        <li><strong>Implementação:</strong> <code>src/assets/gnf_layout.*</code> calcula, só com o cabeçalho, três hipóteses de tamanho (linear, cada mip alinhado a 64 KiB, e total arredondado a 64 KiB), além da geometria de tile (128×64 blocos para BC4, 64×64 para BC7/BC1). O mesmo cálculo de tile foi centralizado e o loader passou a usá-lo (antes era uma cópia local). <code>src/diag_gnf_validate.cpp</code> percorre o dump, valida cada GNF e escreve um manifesto de corpus.</li>
+        <li><strong>Resultado nos 28.949 GNF reais (9,5 s, 0 cabeçalhos inválidos):</strong>
+            <ul>
+                <li>Payload declarado: <strong>116.414.251.008 bytes</strong>; soma linear dos mips: <strong>115.134.925.248 bytes</strong>.</li>
+                <li><strong>Invariante confirmado em 100% dos arquivos: o payload declarado nunca é menor que a soma linear dos mips</strong> (nenhum “menor” em nenhum formato). O excedente médio é ~1,1% e representa padding/arranjo de tiles.</li>
+                <li><strong>Hipóteses testadas e descartadas:</strong> “cada mip ocupa tiles inteiros de 64 KiB” (o declarado é menor em 28.900 arquivos, então mips pequenos não são arredondados individualmente) e “cada mip começa em fronteira de 64 KiB” (também não).</li>
+                <li><strong>Hipótese mais próxima:</strong> “mips contíguos + payload total arredondado a 64 KiB” — exata em 13.179/13.202 BC4 (99,8%), 4.835/4.847 BC7 UNORM, 713/719 CB50 e 9.177/9.695 BC7 sRGB, mas apenas 76/457 no formato 0xCB30. Ou seja: é a regra dominante, não universal; a regra exata de padding por formato ainda não foi totalmente derivada e <strong>não será assumida</strong>.</li>
+                <li>Nenhum arquivo tem payload passando do fim do container (<code>pastEof = 0</code>) — a leitura linear dos mips está sempre dentro do arquivo.</li>
+            </ul>
+        </li>
+        <li><strong>Correção de rumo registrada:</strong> uma primeira alteração no loader passou a avançar os mips pelo tamanho “tileado”; o validador mostrou que isso quebraria 28.900 arquivos (o payload real é menor que essa soma). A alteração foi <strong>revertida</strong> e substituída por duas verificações conservadoras que o dado real sustenta: (a) recusar payload que ultrapassa o fim do arquivo; (b) recusar payload menor que a soma linear dos mips. Nenhuma suposição sobre padding é usada para decodificar.</li>
+        <li><strong>Corpus de teste (sem copiar bytes do jogo):</strong> o validador gera um manifesto CSV com <strong>71 representantes</strong>, um por combinação (formato, tile mode, versão, número de mips), contendo caminho, tamanho, formato, dimensões, payload, as três estimativas e <strong>FNV-1a 64 dos primeiros 1 MiB</strong> de cada arquivo. O manifesto permite reencontrar/validar os mesmos dados localmente sem versionar conteúdo proprietário — nenhum arquivo do dump entra no repositório.</li>
+        <li><strong>Testes:</strong> <code>asset_census_validation</code> ganhou casos de geometria de tile (BC4 128×64, BC7 64×64), textura 4×4 BC4 ocupando um tile inteiro, 128×64 BC7 em um tile, 4096×4096 BC7 com 256 tiles exatos, layout linear sem padding, alinhamento do segundo mip e total arredondado. Suíte segue <strong>8/8</strong>, build sem novos warnings.</li>
+        <li><strong>Próximo uso:</strong> o manifesto é a base do corpus do renderer; com ele é possível abrir um subconjunto representativo, decodificar mips de verdade e comparar com o upload Vulkan — sem executar o jogo e sem inflar o repositório.</li>
+    </ul>
+
     <h2>Próximos Passos Estratégicos</h2>
     <ol>
         <li><strong>Integração das relocations ao pipeline de ELF cru:</strong> Conectar o fluxo <code>ParseElf64Metadata</code> → <code>MapElf64LoadSegments</code> → <code>ApplyElf64RelativeRelocations</code> ao caminho do loader para ELF cru de autoria/uso autorizado, substituindo a interrupção hardcoded em <code>ProcessRelocations()</code>, com logs honestos por etapa. Relocations simbólicas/PLT continuam dependentes de <code>DT_SYMTAB/DT_STRTAB</code> e de uma tabela de imports autorizada do jogo.</li>

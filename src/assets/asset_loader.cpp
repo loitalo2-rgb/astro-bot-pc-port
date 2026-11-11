@@ -1,5 +1,6 @@
 #include "asset_loader.h"
 #include "gnf_format.h"
+#include "gnf_layout.h"
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -41,24 +42,6 @@ uint32_t Standard64kOffset(uint32_t x, uint32_t y, uint32_t bytesPerElement) {
     default:
         return 0;
     }
-}
-
-struct TileBlock {
-    uint32_t widthBlocks = 64;
-    uint32_t heightBlocks = 64;
-};
-
-TileBlock Standard64kBlock(uint32_t bytesPerElement) {
-    TileBlock block;
-    if (bytesPerElement == 0) return block;
-
-    uint32_t elements = 65536u / bytesPerElement;
-    uint32_t bits = 0;
-    while ((1u << bits) < elements) ++bits;
-
-    block.widthBlocks = 1u << ((bits + 1) / 2);
-    block.heightBlocks = 1u << (bits / 2);
-    return block;
 }
 
 } // namespace
@@ -230,8 +213,28 @@ bool AssetLoader::LoadGnf(const std::string& filePath, GnfTexture& outTexture) {
     outTexture.formatName = format.name;
     outTexture.vulkanFormat = format.vulkanFormat;
 
+    if (payloadSize > fileSize - dataOffset) {
+        std::cerr << "[AssetLoader] Payload declarado (" << payloadSize
+                  << " bytes) passa do fim do arquivo " << filePath
+                  << "; carga recusada.\n";
+        return false;
+    }
+
+    // Invariant verified offline on all 28.949 GNF of the dump: the declared
+    // payload is never smaller than the linear sum of the mip chain. A file
+    // that violates it would be decoded past its own data, so refuse instead.
+    const GnfLayout expectedLayout = ComputeGnfLayout(
+        outTexture.width, outTexture.height, outTexture.sourceMipLevels,
+        blockBytes, tileMode != 0);
+    if (expectedLayout.unpaddedBytes > payloadSize) {
+        std::cerr << "[AssetLoader] Payload (" << payloadSize
+                  << ") menor que a cadeia de mips (" << expectedLayout.unpaddedBytes
+                  << "); carga recusada: " << filePath << "\n";
+        return false;
+    }
+
     const bool tiled = (tileMode != 0u);
-    const TileBlock tileBlock = Standard64kBlock(blockBytes);
+    const GnfTileBlock tileBlock = GnfStandard64kBlock(blockBytes);
 
     outTexture.data.clear();
     outTexture.mips.clear();

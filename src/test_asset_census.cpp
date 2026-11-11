@@ -5,6 +5,7 @@
 // classification and the "magic known but header invalid" cases.
 
 #include "assets/asset_census.h"
+#include "assets/gnf_layout.h"
 
 #include <cstdint>
 #include <cstring>
@@ -203,6 +204,58 @@ int main() {
                "short header rejected");
         expect(!AstroPort::ClassifyAssetHeader(nullptr, 8, 0x100, info),
                "null header rejected");
+    }
+
+    // --------------------------------------------------------------
+    // GNF layout: mip chain and 64 KiB tile packing.
+    // --------------------------------------------------------------
+    {
+        const auto bc4Tile = AstroPort::GnfStandard64kBlock(8);
+        expect(bc4Tile.widthBlocks == 128 && bc4Tile.heightBlocks == 64,
+               "BC4 64 KiB tile is 128x64 blocks");
+        const auto bc7Tile = AstroPort::GnfStandard64kBlock(16);
+        expect(bc7Tile.widthBlocks == 64 && bc7Tile.heightBlocks == 64,
+               "BC7 64 KiB tile is 64x64 blocks");
+
+        // A 4x4 BC4 texture with one mip still occupies one whole 64 KiB tile.
+        const auto tiny =
+            AstroPort::ComputeGnfLayout(4, 4, 1, 8, true);
+        expect(tiny.unpaddedBytes == 8, "4x4 BC4 unpadded is 8 bytes");
+        expect(tiny.tiledBytes == 65536, "4x4 BC4 occupies one 64 KiB tile");
+
+        // 128x64 BC7: 32x16 blocks = 8192 bytes, still one tile.
+        const auto small =
+            AstroPort::ComputeGnfLayout(128, 64, 1, 16, true);
+        expect(small.unpaddedBytes == 8192, "128x64 BC7 unpadded is 8192 bytes");
+        expect(small.tiledBytes == 65536, "128x64 BC7 occupies one tile");
+
+        // 4096x4096 BC7 level 0: 1024x1024 blocks = 16 MiB, exactly 256 tiles.
+        const auto big =
+            AstroPort::ComputeGnfLayout(4096, 4096, 1, 16, true);
+        expect(big.unpaddedBytes == 16ull * 1024 * 1024,
+               "4096x4096 BC7 unpadded is 16 MiB");
+        expect(big.tiledBytes == big.unpaddedBytes,
+               "aligned large mip tiles exactly");
+
+        // Untiled layout ignores tile packing entirely.
+        const auto linear =
+            AstroPort::ComputeGnfLayout(128, 64, 2, 16, false);
+        expect(linear.tiledBytes == linear.unpaddedBytes,
+               "linear layout has no tile padding");
+        expect(linear.mipLevels == 2, "mip count preserved");
+        expect(linear.alignedBytes == linear.unpaddedBytes,
+               "linear layout has no 64 KiB alignment padding");
+
+        const auto aligned = AstroPort::ComputeGnfLayout(128, 64, 2, 16, true);
+        expect(aligned.alignedBytes == 65536ull + 2048ull,
+               "second tiled mip starts at a 64 KiB boundary");
+        expect(aligned.roundedTotalBytes == 65536ull,
+               "whole payload rounded to one 64 KiB block");
+
+        const auto degenerate =
+            AstroPort::ComputeGnfLayout(0, 64, 4, 16, true);
+        expect(degenerate.unpaddedBytes == 0 && degenerate.tiledBytes == 0,
+               "zero-sized layout is empty");
     }
 
     if (failures != 0) {
