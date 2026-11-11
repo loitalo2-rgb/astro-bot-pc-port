@@ -45,6 +45,7 @@ add_library(AstroBotCore STATIC
     src/patches/patch_manager.cpp
     src/kernel/kernel_emulator.cpp
     src/gpu/vulkan_backend.cpp
+    src/gpu/command_stream.cpp
     src/gpu/vulkan_loader.cpp
     src/gpu/shader_recompiler.cpp
     src/audio/audio_backend.cpp
@@ -129,6 +130,15 @@ add_executable(diag_gnf_validate src/diag_gnf_validate.cpp)
 target_link_libraries(diag_gnf_validate PRIVATE AstroBotCore)
 target_include_directories(diag_gnf_validate PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(diag_command_stream src/diag_command_stream.cpp)
+target_link_libraries(diag_command_stream PRIVATE AstroBotCore)
+target_include_directories(diag_command_stream PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(test_command_stream src/test_command_stream.cpp)
+target_link_libraries(test_command_stream PRIVATE AstroBotCore)
+target_include_directories(test_command_stream PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME command_stream_validation COMMAND test_command_stream)
+
 add_executable(test_audio_at9 src/test_audio_at9.cpp)
 target_link_libraries(test_audio_at9 PRIVATE AstroBotCore)
 target_include_directories(test_audio_at9 PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -166,8 +176,10 @@ if(WIN32)
         diag_gnf
         diag_census
         diag_gnf_validate
+        diag_command_stream
         test_tex_load
         test_asset_census
+        test_command_stream
         test_audio_at9
         test_gameplay_movement
         test_level_collision

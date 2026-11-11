@@ -1635,6 +1635,18 @@ int main(int argc, char* argv[]) {
 
         // Encerramento
         LogMessage("[Main] Encerrando subsistemas...");
+        if (const char* dumpPath = std::getenv("ASTRO_CMD_DUMP")) {
+            std::string dumpError;
+            if (VulkanBackend::Get().GetCommandRecorder().Empty()) {
+                LogMessage("[Main] Stream AGCR vazio; nada a gravar.");
+            } else if (VulkanBackend::Get().DumpCommandStream(dumpPath, dumpError)) {
+                LogMessage(std::string("[Main] Stream de comandos AGCR gravado em ") +
+                           dumpPath);
+            } else {
+                LogMessage(std::string("[Main] Nao foi possivel gravar o stream AGCR: ") +
+                           dumpError);
+            }
+        }
         InputManager::Get().StopAllVibration();
         InputManager::Get().Shutdown();
         AudioBackend::Get().Shutdown();

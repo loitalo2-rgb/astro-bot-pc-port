@@ -20,6 +20,7 @@ seja entendida e validada — a política do projeto é **fail-closed** desde o 
 | Relocations `R_X86_64_RELATIVE` (tipo 8, sym 0) | ✅ implementado |
 | Censo offline de assets (GNF/JXMD/SELF/ELF/SPIR-V) | ✅ implementado |
 | Tabela central de formatos GNF→Vulkan (fail-closed p/ IDs desconhecidos) | ✅ implementado |
+| Gravador de comandos AGCR + replay offline (sem GPU, sem GNM do convidado) | ✅ implementado |
 | Resolução de imports / NIDs (≈2.930 referências pendentes) | ⏳ próxima etapa |
 | Execução / runtime PS5 | ❌ recusada por design |
 
@@ -45,10 +46,11 @@ entropia ≥ 7,5 bits/byte em payload mapeado, tamanho de registro ≠ `p_filesz
 
 ### Validação
 
-- Suite de testes (CTest): **8/8 passando**, incluindo `self_inspection_validation`,
-  `self_reconstruction_validation` (fixtures sintéticos + 5 casos de recusa) e
+- Suite de testes (CTest): **9/9 passando**, incluindo `self_inspection_validation`,
+  `self_reconstruction_validation` (fixtures sintéticos + 5 casos de recusa),
   `asset_census_validation` (GNF/JXMD/SELF/ELF/SPIR-V, formatos mapeados e não mapeados,
-  geometria de tile e layout de mips GNF).
+  geometria de tile e layout de mips GNF) e `command_stream_validation`
+  (gravação AGCR, round-trip binário, replay e 12 casos de recusa).
 - Diagnóstico em dump real (somente leitura): `eboot.bin` de 259.312.583 bytes
   reconstruído em imagem ELF64 de **258.866.503 bytes**, 14 program headers
   (6 de registros, 6 via PT_LOAD, 1 trailing, 1 sem dados), auto-validado pelo
@@ -106,6 +108,18 @@ total arredondado a 64 KiB) e relata arquivos cuja leitura passaria do fim do
 container. O CSV opcional é um manifesto de corpus (caminho, formato, dimensões,
 payload, estimativas e hash FNV-1a dos primeiros 1 MiB) — apenas metadados, nunca
 bytes proprietários.
+
+```bat
+build\clang\diag_command_stream.exe <arquivo.agcr> [--dump saida.txt]
+build\clang\diag_command_stream.exe --demo saida.agcr
+```
+
+Analisa um stream de comandos AGCR gravado pela porta: valida o arquivo e resume
+frames, draws, índices, texturas e formatos GNF. Com `ASTRO_CMD_DUMP=<arquivo>`
+o executável grava o stream no encerramento. `--demo` gera um stream sintético
+(identificado como tal) para exercitar formato e validador sem GPU. O AGCR é o
+formato neutro desta porta — não é GNM/AGC do PS5 e não afirma compatibilidade
+binária com ele.
 
 ## Relatórios
 

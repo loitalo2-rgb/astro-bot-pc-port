@@ -3,6 +3,7 @@
 #include "vulkan_types.h"
 #include "shader_bytecode.h"
 #include "shader_recompiler.h"
+#include "command_stream.h"
 #include "../assets/asset_loader.h"
 #include "../kernel/kernel_emulator.h"
 
@@ -703,6 +704,8 @@ bool VulkanBackend::UploadTexture(const GnfTexture& texture) {
           + " " + std::to_string(texture.width) + "x" + std::to_string(texture.height)
           + " formato=" + std::to_string(texture.vulkanFormat)
           + " bytes=" + std::to_string(texture.data.size()));
+    m_recorder.BindTexture(texture.formatId, texture.width, texture.height,
+                           uploadMipLevels);
     return true;
 }
 
@@ -1667,6 +1670,12 @@ void VulkanBackend::BeginFrame() {
         return;
     }
 
+    // Record the frame before emitting its draw calls, using the transform that
+    // SetModelTransform stored for this frame. Recording is observational only.
+    m_recorder.BeginFrame(m_width, m_height);
+    m_recorder.SetModelTransform(m_rotY, m_rotX, m_zoom, m_jump,
+                                 m_horizontalOffset);
+
     VkClearValue clears[2]{};
     clears[0].color.float32[0] = 0.015f;
     clears[0].color.float32[1] = 0.025f;
@@ -1743,9 +1752,11 @@ void VulkanBackend::BeginFrame() {
                 if (range.indexCount == 0) continue;
                 if (debugMaterial >= 0 && static_cast<int>(range.materialIndex) != debugMaterial) continue;
                 g_ext.vkCmdDrawIndexed(cmd, range.indexCount, 1, range.indexOffset, 0, 0);
+                m_recorder.Draw(range.indexOffset, range.indexCount, range.materialIndex);
             }
         } else {
             g_ext.vkCmdDrawIndexed(cmd, m_indexCount, 1, 0, 0, 0);
+            m_recorder.Draw(0, m_indexCount, 0);
         }
     }
 
@@ -1816,6 +1827,8 @@ void VulkanBackend::BeginFrame() {
 
 void VulkanBackend::EndFrame() {
     if (!m_swapchainReady || !m_frameAcquired) return;
+
+    m_recorder.EndFrame();
 
     VkSwapchainKHR swapchain = reinterpret_cast<VkSwapchainKHR>(m_swapchain);
     VkSemaphore waitSem = reinterpret_cast<VkSemaphore>(m_renderFinished);
@@ -1902,6 +1915,11 @@ void VulkanBackend::DestroyShaderModule(uint64_t shaderModuleHandle) {
     if (vk.vkDestroyShaderModule) {
         vk.vkDestroyShaderModule((VkDevice)m_vkDevice, (VkShaderModule)shaderModuleHandle, nullptr);
     }
+}
+
+bool VulkanBackend::DumpCommandStream(const std::string& path,
+                                      std::string& error) const {
+    return SerializeGpuCommandStream(m_recorder.Commands(), path, error);
 }
 
 } // namespace AstroPort
