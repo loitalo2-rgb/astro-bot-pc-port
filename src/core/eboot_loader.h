@@ -58,6 +58,7 @@ struct Elf64MappedImage {
 
 struct Elf64RelocationResult {
     size_t relativeApplied = 0;  // R_X86_64_RELATIVE entries applied
+    size_t symbolicApplied = 0;  // R_X86_64_64/GLOB_DAT/JUMP_SLOT entries applied
 };
 
 // -----------------------------------------------------------------------------

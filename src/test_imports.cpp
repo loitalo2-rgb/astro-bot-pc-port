@@ -165,6 +165,31 @@ int main() {
     }
 
     // --------------------------------------------------------------
+    // Names recovered from the real eboot by applying the NID algorithm to
+    // standard C/C++ symbol names (no external database).
+    // --------------------------------------------------------------
+    {
+        expect(NidResolver::DecodeBase64Nid("zr094EQ39Ww") ==
+                   NidResolver::ComputeNid("__cxa_pure_virtual"),
+               "__cxa_pure_virtual NID matches the real eboot");
+        const NidEntry* pureVirtual =
+            NidResolver::Get().FindByHash(NidResolver::ComputeNid(
+                "__cxa_pure_virtual"));
+        expect(pureVirtual != nullptr && pureVirtual->stubAddress != nullptr,
+               "__cxa_pure_virtual has an aborting native stub");
+        expect(NidResolver::DecodeBase64Nid("XwLA5cTHjt4") ==
+                   NidResolver::ComputeNid("__gxx_personality_v0"),
+               "__gxx_personality_v0 NID matches the real eboot");
+        const NidEntry* personality = NidResolver::Get().FindByHash(
+            NidResolver::ComputeNid("__gxx_personality_v0"));
+        expect(personality != nullptr && personality->stubAddress == nullptr,
+               "exception personality is known but has no stub");
+        expect(NidResolver::DecodeBase64Nid("f7uOxY9mM1U") ==
+                   NidResolver::ComputeNid("__stack_chk_guard"),
+               "__stack_chk_guard NID matches the real eboot");
+    }
+
+    // --------------------------------------------------------------
     // ELF64 import scan.
     // --------------------------------------------------------------
     SyntheticElf elf = MakeElf();

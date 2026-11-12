@@ -5,9 +5,10 @@
 // how many the port already knows or implements. Nothing is executed, no
 // import is patched, no game bytes are written.
 //
-// Usage: diag_imports <eboot.bin|image.elf> [--list-missing N]
+// Usage: diag_imports <eboot.bin|image.elf> [--bind] [--list-missing N]
 
 #include "core/eboot_loader.h"
+#include "core/import_binding.h"
 #include "core/import_scanner.h"
 #include "core/nid_resolver.h"
 
@@ -50,16 +51,26 @@ uint32_t ReadLe32(const uint8_t* bytes) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        std::cerr << "Uso: diag_imports <eboot.bin|image.elf> "
+        std::cerr << "Uso: diag_imports <eboot.bin|image.elf> [--bind] "
                      "[--list-missing N]\n";
         return 1;
     }
     size_t listMissing = 40;
-    if (argc == 4 && std::string(argv[2]) == "--list-missing") {
-        listMissing = static_cast<size_t>(std::stoul(argv[3]));
-    } else if (argc != 2) {
-        std::cerr << "Argumentos invalidos.\n";
-        return 1;
+    bool bind = false;
+    for (int i = 2; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if (arg == "--list-missing") {
+            if (i + 1 >= argc) {
+                std::cerr << "--list-missing exige um numero.\n";
+                return 1;
+            }
+            listMissing = static_cast<size_t>(std::stoul(argv[++i]));
+        } else if (arg == "--bind") {
+            bind = true;
+        } else {
+            std::cerr << "Argumento invalido: " << arg << "\n";
+            return 1;
+        }
     }
 
     std::vector<uint8_t> fileBytes;
@@ -154,6 +165,58 @@ int main(int argc, char* argv[]) {
                 std::cout << ")";
             }
             std::cout << "\n";
+        }
+    }
+
+    if (bind) {
+        std::cout << "\n=== Viabilidade de vinculacao de imports (somente leitura) ===\n";
+        AstroPort::Elf64Metadata metadata;
+        AstroPort::ImportBindingPlan plan;
+        std::string bindError;
+        if (!AstroPort::ParseElf64Metadata(elfBytes, elfSize, metadata)) {
+            std::cout << "Recusado: metadados ELF64 invalidos.\n";
+        } else if (!AstroPort::PlanImportBinding(elfBytes, elfSize, metadata,
+                                                 AstroPort::NidResolver::Get(),
+                                                 plan, bindError)) {
+            std::cout << "Recusado: " << bindError << "\n";
+        } else {
+            std::cout << "Entradas DT_RELA     : " << plan.relaEntries << "\n";
+            std::cout << "Entradas DT_JMPREL   : " << plan.jmprelEntries << "\n";
+            std::cout << "RELATIVE             : " << plan.relativeEntries << "\n";
+            std::cout << "Simbolicas           : " << plan.symbolicEntries << "\n";
+            for (const auto& [type, count] : plan.symbolicByType) {
+                const char* name = type == 1 ? "R_X86_64_64"
+                                  : type == 6 ? "R_X86_64_GLOB_DAT"
+                                  : type == 7 ? "R_X86_64_JUMP_SLOT"
+                                              : "desconhecido";
+                std::cout << "  " << name << " : " << count << "\n";
+            }
+            std::cout << "Simbolos distintos   : " << plan.distinctSymbols << "\n";
+            std::cout << "  com stub nativo    : " << plan.resolvableSymbols << "\n";
+            std::cout << "  conhecidos sem stub: " << plan.knownWithoutStub << "\n";
+            std::cout << "  desconhecidos      : " << plan.unknownSymbols << "\n";
+            std::cout << "Slots vinculaveis    : " << plan.bindableSlots << "\n";
+            std::cout << "Slots sem stub       : " << plan.unresolvableSlots << "\n";
+            std::cout << "Slots invalidos      : " << plan.invalidSlots << "\n";
+            std::cout << "Imagem vinculavel    : "
+                      << (plan.complete() ? "SIM" : "NAO (recusa fail-closed)")
+                      << "\n";
+            if (!plan.unresolvedSymbols.empty()) {
+                std::cout << "Maiores bloqueios (simbolo x slots):\n";
+                const size_t count =
+                    std::min<size_t>(10, plan.unresolvedSymbols.size());
+                for (size_t i = 0; i < count; ++i) {
+                    const auto& symbol = plan.unresolvedSymbols[i];
+                    std::cout << "  " << symbol.encodedNid << " x "
+                              << symbol.slots;
+                    if (!symbol.suffix.empty()) std::cout << "  #" << symbol.suffix;
+                    if (!symbol.libraryName.empty()) {
+                        std::cout << "  (" << symbol.libraryName << " / "
+                                  << symbol.symbolName << ")";
+                    }
+                    std::cout << "\n";
+                }
+            }
         }
     }
 

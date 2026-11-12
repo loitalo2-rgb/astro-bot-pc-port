@@ -54,6 +54,7 @@ add_library(AstroBotCore STATIC
     src/core/eboot_loader.cpp
     src/core/nid_resolver.cpp
     src/core/import_scanner.cpp
+    src/core/import_binding.cpp
     src/core/dispatch_table.cpp
     src/assets/asset_loader.cpp
     src/assets/jxmd_parser.cpp
@@ -149,6 +150,11 @@ target_link_libraries(test_imports PRIVATE AstroBotCore)
 target_include_directories(test_imports PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME import_catalog_validation COMMAND test_imports)
 
+add_executable(test_import_binding src/test_import_binding.cpp)
+target_link_libraries(test_import_binding PRIVATE AstroBotCore)
+target_include_directories(test_import_binding PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME import_binding_validation COMMAND test_import_binding)
+
 add_executable(test_audio_at9 src/test_audio_at9.cpp)
 target_link_libraries(test_audio_at9 PRIVATE AstroBotCore)
 target_include_directories(test_audio_at9 PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -192,6 +198,7 @@ if(WIN32)
         test_asset_census
         test_command_stream
         test_imports
+        test_import_binding
         test_audio_at9
         test_gameplay_movement
         test_level_collision
