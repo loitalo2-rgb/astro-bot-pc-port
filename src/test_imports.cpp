@@ -221,6 +221,59 @@ int main() {
                scan.imports[0].nid == NidResolver::ComputeNid("malloc"),
            "import NID decoded");
     expect(scan.imports[0].suffix == "s#s", "suffix preserved");
+    expect(!scan.imports[0].suffixDecoded,
+           "unresolvable suffix index is not decoded (fail-closed)");
+
+    // --------------------------------------------------------------
+    // "#lib#module" suffix decoding: real suffix digits against full tables.
+    // --------------------------------------------------------------
+    {
+        std::vector<std::string> libraries(63);
+        for (size_t i = 0; i < libraries.size(); ++i) {
+            libraries[i] = "lib" + std::to_string(i);
+        }
+        libraries[43] = "libkernel";
+        libraries[44] = "libc";
+        std::vector<std::string> modules(60);
+        for (size_t i = 0; i < modules.size(); ++i) {
+            modules[i] = "module" + std::to_string(i) + ".prx";
+        }
+        modules[43] = "libc.prx";      // NEEDED index 43
+        modules[38] = "libkernel.prx"; // NEEDED index 38
+
+        ImportSuffixInfo info;
+        expect(DecodeImportSuffix("s#s", libraries, modules, info) &&
+                   info.decoded && info.libraryIndex == 44 &&
+                   info.moduleIndex == 44 && info.libraryName == "libc" &&
+                   info.moduleName == "libc.prx",
+               "suffix s#s decodes to libc in module libc.prx");
+        expect(DecodeImportSuffix("r#n", libraries, modules, info) &&
+                   info.libraryName == "libkernel" &&
+                   info.moduleName == "libkernel.prx",
+               "suffix r#n decodes to libkernel in module libkernel.prx");
+
+        expect(!DecodeImportSuffix("s", libraries, modules, info),
+               "short suffix is refused");
+        expect(!DecodeImportSuffix("s#s#s", libraries, modules, info),
+               "overlong suffix is refused");
+        expect(!DecodeImportSuffix("!#s", libraries, modules, info),
+               "invalid library digit is refused");
+        expect(!DecodeImportSuffix("s#!", libraries, modules, info),
+               "invalid module digit is refused");
+        expect(!DecodeImportSuffix("s#A", libraries, modules, info),
+               "module index 0 is refused");
+        expect(!DecodeImportSuffix("/#s", libraries, modules, info),
+               "library index 63 is refused");
+        expect(!DecodeImportSuffix("s#/", libraries, modules, info),
+               "module index 63 is out of range");
+
+        std::vector<std::string> small(2, "x");
+        expect(!DecodeImportSuffix("s#s", small, modules, info),
+               "library index outside the table is refused");
+        expect(!DecodeImportSuffix("A#s", libraries, small, info),
+               "module index outside the table is refused");
+        expect(!info.decoded, "failed decode leaves no decoded result");
+    }
 
     ImportCoverage coverage;
     EvaluateImportCoverage(scan, NidResolver::Get(), coverage);

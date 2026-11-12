@@ -26,10 +26,13 @@ struct ImportBindingSymbol {
     std::string suffix;
     std::string libraryName;   // from the resolver, when known
     std::string symbolName;    // from the resolver, when known
+    std::string suffixLibrary;  // decoded from the suffix, independent of resolver
+    std::string suffixModule;   // decoded from the suffix
     uint64_t nid = 0;
     uint64_t slots = 0;
     bool known = false;
     bool hasStub = false;
+    bool suffixDecoded = false;
 };
 
 struct ImportBindingPlan {
@@ -47,6 +50,13 @@ struct ImportBindingPlan {
     uint64_t bindableSlots = 0;    // symbolic slots whose symbol has a stub
     uint64_t unresolvableSlots = 0;
     uint64_t invalidSlots = 0;     // r_offset/symbol index outside the image
+    uint64_t suffixDecodedSymbols = 0;
+    uint64_t suffixUndecodedSymbols = 0;
+
+    // Distribution of unresolved symbols by decoded import library. This is the
+    // real target for the next stubs, not the raw suffix token.
+    std::map<std::string, uint64_t> unknownByLibrary;
+    std::map<std::string, uint64_t> knownWithoutStubByLibrary;
 
     std::vector<ImportBindingSymbol> unresolvedSymbols;
 

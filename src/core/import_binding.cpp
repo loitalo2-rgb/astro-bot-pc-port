@@ -1,5 +1,7 @@
 #include "core/import_binding.h"
 
+#include "core/import_scanner.h"
+
 #include <algorithm>
 #include <cstring>
 #include <functional>
@@ -13,6 +15,7 @@ namespace AstroPort {
 namespace {
 
 constexpr uint64_t kDtNull = 0;
+constexpr uint64_t kDtNeeded = 1;
 constexpr uint64_t kDtStrtab = 5;
 constexpr uint64_t kDtSymtab = 6;
 constexpr uint64_t kDtRela = 7;
@@ -23,6 +26,7 @@ constexpr uint64_t kDtPltrel = 20;
 constexpr uint64_t kDtJmprel = 23;
 constexpr uint64_t kDtPltrelsz = 2;
 constexpr uint64_t kDtSceSymtabSize = 0x6100003f;
+constexpr uint64_t kDtSceImportLib = 0x61000049;
 
 constexpr uint64_t kRelEntrySize = 24;
 constexpr uint64_t kElf64SymSize = 24;
@@ -47,6 +51,8 @@ struct Tables {
     uint64_t symbolCount = 0;
     bool hasRela = false;
     bool hasJmprel = false;
+    std::vector<std::string> importLibraries;  // DT_SCE_IMPORT_LIB order
+    std::vector<std::string> neededModules;    // DT_NEEDED order
 };
 
 uint64_t ReadLe64(const uint8_t* bytes, size_t size, size_t offset, bool& ok) {
@@ -242,6 +248,28 @@ bool ParseTables(const Elf64MappedImage& image, const Elf64Metadata& metadata,
         tables.hasJmprel = jmprelSize != 0;
     }
 
+    // Library/module names are required to decode the "#lib#module" suffix.
+    // They are metadata only; a failure to read one is a structural error.
+    for (const auto& [tag, value] : tags) {
+        if (tag != kDtNeeded && tag != kDtSceImportLib) continue;
+        const uint64_t nameOffset =
+            tag == kDtNeeded ? value : static_cast<uint32_t>(value & 0xffffffff);
+        std::string name;
+        if (!ReadCString(bytes, size,
+                         static_cast<size_t>(tables.strtabOffset),
+                         tables.strtabSize, nameOffset, name)) {
+            error = tag == kDtNeeded
+                        ? "DT_NEEDED fora da string table"
+                        : "DT_SCE_IMPORT_LIB fora da string table";
+            return false;
+        }
+        if (tag == kDtNeeded) {
+            tables.neededModules.push_back(std::move(name));
+        } else {
+            tables.importLibraries.push_back(std::move(name));
+        }
+    }
+
     return true;
 }
 
@@ -398,6 +426,16 @@ bool PlanImportBinding(const uint8_t* bytes, size_t size,
         symbol.encodedNid =
             hashPos == std::string::npos ? name : name.substr(0, hashPos);
         if (hashPos != std::string::npos) symbol.suffix = name.substr(hashPos + 1);
+        ImportSuffixInfo suffixInfo;
+        if (DecodeImportSuffix(symbol.suffix, tables.importLibraries,
+                               tables.neededModules, suffixInfo)) {
+            symbol.suffixDecoded = true;
+            symbol.suffixLibrary = suffixInfo.libraryName;
+            symbol.suffixModule = suffixInfo.moduleName;
+            ++plan.suffixDecodedSymbols;
+        } else {
+            ++plan.suffixUndecodedSymbols;
+        }
         if (symbol.encodedNid.size() == 11) {
             symbol.nid = NidResolver::DecodeBase64Nid(symbol.encodedNid);
         }
@@ -411,6 +449,9 @@ bool PlanImportBinding(const uint8_t* bytes, size_t size,
         if (!entry) {
             ++plan.unknownSymbols;
             plan.unresolvableSlots += count;
+            ++plan.unknownByLibrary[symbol.suffixDecoded
+                                        ? symbol.suffixLibrary
+                                        : std::string("<unknown>")];
             plan.unresolvedSymbols.push_back(std::move(symbol));
             continue;
         }
@@ -421,6 +462,7 @@ bool PlanImportBinding(const uint8_t* bytes, size_t size,
         if (!symbol.hasStub) {
             ++plan.knownWithoutStub;
             plan.unresolvableSlots += count;
+            ++plan.knownWithoutStubByLibrary[entry->libraryName];
             plan.unresolvedSymbols.push_back(std::move(symbol));
             continue;
         }

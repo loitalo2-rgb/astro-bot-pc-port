@@ -17,7 +17,7 @@ Este projeto reúne ferramentas de desenvolvimento, parsers de assets (como form
 - **Loader:** inspeção SELF e reconstrução SELF→ELF em memória, fail-closed. Nenhum payload é descriptografado e nenhum código do jogo é executado.
 - **Assets:** censo offline (166.717 arquivos, 148,83 GiB, 0 ilegíveis), validação de 28.949 GNF e manifesto de corpus com 71 representantes (sem versionar bytes do jogo).
 - **Gráficos:** gravador de comandos próprio `AGCR` (validação fail-closed, replay offline e dump via `ASTRO_CMD_DUMP`).
-- **Imports/NIDs:** catálogo offline do eboot real — 1.747 imports, 1.747 NIDs únicos, 60 módulos, 63 bibliotecas SCE; **147 conhecidos (8,4%)**, 48 com stub nativo e **1.600 sem mapeamento**. O plano de vinculação aponta **1.228 de 2.930 slots simbólicos vinculáveis (41,9%)** e recusa a aplicação fail-closed. Bloqueio seguinte: ponte de ABI SysV→Win64. Ver as seções correspondentes no relatório.
+- **Imports/NIDs:** catálogo offline do eboot real — 1.747 imports, 1.747 NIDs únicos, 60 módulos, 63 bibliotecas SCE; **147 conhecidos (8,4%)**, 48 com stub nativo e **1.600 sem mapeamento**. O sufixo `#lib#módulo` de cada NID é decodificado (1.747/1.747), então a lacuna é atribuída à biblioteca real: **802 em `libSceNpCppWebApi`**, 124 em `libc`, 89 em `libkernel`, 72 em `libSceJson2`, 65 em `libSceAgc`. O plano de vinculação aponta **1.228 de 2.930 slots simbólicos vinculáveis (41,9%)** e recusa a aplicação fail-closed. Bloqueio seguinte: ponte de ABI SysV→Win64. Ver as seções correspondentes no relatório.
 
 ## 🛠️ Ferramentas de diagnóstico
 - `diag_eboot <arquivo> [saida.elf]`: inspeção SELF e reconstrução para análise.
@@ -29,6 +29,7 @@ Este projeto reúne ferramentas de desenvolvimento, parsers de assets (como form
 ## 🔌 Camada de vinculação e ABI
 - **ABI:** ponte SysV AMD64 → Microsoft x64 por thunks gerados em memória executável, cobrindo até 6 argumentos inteiros/ponteiros, com cache por alvo. `NidResolver::GetCallableStub` devolve o endereço chamável pelo convidado. Limites: sem float misto, variádicos, 7+ argumentos ou retorno de struct.
 - **Binding:** planejador que classifica cada relocação (RELATIVE, 64, GLOB_DAT, JUMP_SLOT) e aplica de forma atômica somente quando todos os slots têm stub. Hoje 1.228 de 2.930 slots são vinculáveis; a aplicação é recusada por design.
+- **Sufixo do símbolo:** os dois dígitos base64 após o NID são índices, não texto. O primeiro aponta para `DT_SCE_IMPORT_LIB`; o segundo é o índice `DT_NEEDED` mais um (o slot 0 é o próprio módulo importador). Índices fora das tabelas são recusados. A validação no eboot real deu 1.747/1.747 sufixos válidos e 1.709 nomes de módulo coincidentes; os 38 restantes são bibliotecas que compartilham módulo (`libScePosix` → `libkernel`, `libSceAudioOut2` → `libSceAudioOut`).
 
 ## ⚠️ Limites
 A execução do jogo continua inviável e é recusada por design: faltam 1.600 NIDs mapeados, semântica de kernel/libc/GPU para os stubs, cobertura de assinaturas mais complexas na ponte de ABI e um runtime de CPU/ABI/GNM. O projeto não contorna criptografia, DRM ou controles de acesso do console. Nenhum byte do jogo é versionado.

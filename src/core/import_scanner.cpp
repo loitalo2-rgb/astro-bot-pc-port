@@ -90,7 +90,42 @@ bool ReadCString(const uint8_t* bytes, size_t size, size_t tableOffset,
     return true;
 }
 
+// Standard base64 alphabet (same one used by the NID encoding).
+int Base64Digit(char c) {
+    if (c >= 'A' && c <= 'Z') return c - 'A';
+    if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+    if (c >= '0' && c <= '9') return c - '0' + 52;
+    if (c == '+') return 62;
+    if (c == '/') return 63;
+    return -1;
+}
+
 } // namespace
+
+bool DecodeImportSuffix(const std::string& suffix,
+                        const std::vector<std::string>& importLibraries,
+                        const std::vector<std::string>& neededModules,
+                        ImportSuffixInfo& out) {
+    out = ImportSuffixInfo{};
+    if (suffix.size() != 3 || suffix[1] != '#') return false;
+    const int libraryDigit = Base64Digit(suffix[0]);
+    const int moduleDigit = Base64Digit(suffix[2]);
+    if (libraryDigit < 0 || moduleDigit < 0) return false;
+    if (static_cast<size_t>(libraryDigit) >= importLibraries.size()) {
+        return false;
+    }
+    // Slot 0 is the importing module; DT_NEEDED entries start at 1.
+    if (moduleDigit < 1 ||
+        static_cast<size_t>(moduleDigit - 1) >= neededModules.size()) {
+        return false;
+    }
+    out.decoded = true;
+    out.libraryIndex = static_cast<uint32_t>(libraryDigit);
+    out.moduleIndex = static_cast<uint32_t>(moduleDigit);
+    out.libraryName = importLibraries[libraryDigit];
+    out.moduleName = neededModules[moduleDigit - 1];
+    return true;
+}
 
 bool ScanElf64Imports(const uint8_t* bytes, size_t size,
                       ImportScanResult& result, std::string& error) {
@@ -268,11 +303,25 @@ bool ScanElf64Imports(const uint8_t* bytes, size_t size,
                 error = "DT_SCE_IMPORT_LIB fora da string table";
                 return false;
             }
-            if (std::find(result.importLibraries.begin(),
-                          result.importLibraries.end(),
-                          name) == result.importLibraries.end()) {
-                result.importLibraries.push_back(std::move(name));
-            }
+            // Keep tag order: the suffix's first digit is an index into this
+            // vector, so de-duplicating would shift later indices.
+            result.importLibraries.push_back(std::move(name));
+        }
+    }
+
+    // Decode the "#lib#module" token now that both tables are known.
+    for (ImportedSymbol& symbol : result.imports) {
+        ImportSuffixInfo info;
+        if (DecodeImportSuffix(symbol.suffix, result.importLibraries,
+                               result.neededModules, info)) {
+            symbol.suffixDecoded = true;
+            symbol.libraryIndex = info.libraryIndex;
+            symbol.moduleIndex = info.moduleIndex;
+            symbol.libraryName = std::move(info.libraryName);
+            symbol.moduleName = std::move(info.moduleName);
+            ++result.suffixDecodedCount;
+        } else {
+            ++result.suffixUndecodedCount;
         }
     }
 
@@ -288,15 +337,22 @@ void EvaluateImportCoverage(const ImportScanResult& scan,
         if (!symbol.decoded) continue;
         if (!seen.insert(symbol.nid).second) continue;
         ++coverage.uniqueNids;
+        const std::string library =
+            symbol.suffixDecoded ? symbol.libraryName : std::string("<unknown>");
+        const std::string module =
+            symbol.suffixDecoded ? symbol.moduleName : std::string("<unknown>");
         const NidEntry* entry = resolver.FindByHash(symbol.nid);
         if (!entry) {
             ++coverage.missing;
             ++coverage.missingBySuffix[symbol.suffix];
+            ++coverage.missingByLibrary[library];
+            ++coverage.missingByModule[module];
             coverage.missingSymbols.push_back(symbol);
             continue;
         }
         ++coverage.known;
         ++coverage.knownBySuffix[symbol.suffix][entry->libraryName];
+        ++coverage.knownByLibrary[entry->libraryName];
         if (entry->stubAddress != nullptr) ++coverage.implemented;
     }
 }

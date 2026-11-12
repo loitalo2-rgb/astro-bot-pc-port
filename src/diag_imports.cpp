@@ -126,6 +126,8 @@ int main(int argc, char* argv[]) {
     std::cout << "NIDs unicos        : " << scan.uniqueNids << "\n";
     std::cout << "Modulos (NEEDED)   : " << scan.neededModules.size() << "\n";
     std::cout << "Bibliotecas (SCE)  : " << scan.importLibraries.size() << "\n";
+    std::cout << "Sufixos decodif.   : " << scan.suffixDecodedCount << " ok, "
+              << scan.suffixUndecodedCount << " nao decodificados\n";
     std::cout << "NIDs conhecidos    : " << coverage.known << "\n";
     std::cout << "  com stub nativo  : " << coverage.implemented << "\n";
     std::cout << "NIDs sem mapeamento: " << coverage.missing << "\n";
@@ -145,26 +147,28 @@ int main(int argc, char* argv[]) {
         std::cout << "  " << library << "\n";
     }
 
-    if (!coverage.missingBySuffix.empty()) {
+    if (!coverage.missingByLibrary.empty()) {
         std::vector<std::pair<uint64_t, std::string>> groups;
-        for (const auto& [suffix, count] : coverage.missingBySuffix) {
-            groups.emplace_back(count, suffix);
+        for (const auto& [library, count] : coverage.missingByLibrary) {
+            groups.emplace_back(count, library);
         }
         std::sort(groups.begin(), groups.end(),
                   [](const auto& a, const auto& b) { return a.first > b.first; });
 
-        std::cout << "\nNIDs sem mapeamento por grupo de simbolo:\n";
-        for (const auto& [count, suffix] : groups) {
-            std::cout << "  #" << suffix << "  " << count;
-            const auto hint = coverage.knownBySuffix.find(suffix);
-            if (hint != coverage.knownBySuffix.end()) {
-                std::cout << "  (conhecidos neste grupo:";
-                for (const auto& [library, known] : hint->second) {
-                    std::cout << " " << library << "=" << known;
-                }
-                std::cout << ")";
-            }
-            std::cout << "\n";
+        std::cout << "\nNIDs sem mapeamento por biblioteca (decodificada do sufixo):\n";
+        for (const auto& [count, library] : groups) {
+            std::cout << "  " << count << "  " << library << "\n";
+        }
+
+        std::vector<std::pair<uint64_t, std::string>> modules;
+        for (const auto& [module, count] : coverage.missingByModule) {
+            modules.emplace_back(count, module);
+        }
+        std::sort(modules.begin(), modules.end(),
+                  [](const auto& a, const auto& b) { return a.first > b.first; });
+        std::cout << "\nNIDs sem mapeamento por modulo (NEEDED):\n";
+        for (const auto& [count, module] : modules) {
+            std::cout << "  " << count << "  " << module << "\n";
         }
     }
 
@@ -198,9 +202,41 @@ int main(int argc, char* argv[]) {
             std::cout << "Slots vinculaveis    : " << plan.bindableSlots << "\n";
             std::cout << "Slots sem stub       : " << plan.unresolvableSlots << "\n";
             std::cout << "Slots invalidos      : " << plan.invalidSlots << "\n";
+            std::cout << "Sufixos por simbolo  : " << plan.suffixDecodedSymbols
+                      << " ok, " << plan.suffixUndecodedSymbols
+                      << " nao decodificados\n";
             std::cout << "Imagem vinculavel    : "
                       << (plan.complete() ? "SIM" : "NAO (recusa fail-closed)")
                       << "\n";
+            if (!plan.unknownByLibrary.empty()) {
+                std::cout << "Desconhecidos por biblioteca:\n";
+                std::vector<std::pair<uint64_t, std::string>> groups;
+                for (const auto& [library, slots] : plan.unknownByLibrary) {
+                    groups.emplace_back(slots, library);
+                }
+                std::sort(groups.begin(), groups.end(),
+                          [](const auto& a, const auto& b) {
+                              return a.first > b.first;
+                          });
+                for (const auto& [slots, library] : groups) {
+                    std::cout << "  " << slots << " slots  " << library << "\n";
+                }
+            }
+            if (!plan.knownWithoutStubByLibrary.empty()) {
+                std::cout << "Conhecidos sem stub por biblioteca:\n";
+                std::vector<std::pair<uint64_t, std::string>> groups;
+                for (const auto& [library, slots] :
+                     plan.knownWithoutStubByLibrary) {
+                    groups.emplace_back(slots, library);
+                }
+                std::sort(groups.begin(), groups.end(),
+                          [](const auto& a, const auto& b) {
+                              return a.first > b.first;
+                          });
+                for (const auto& [slots, library] : groups) {
+                    std::cout << "  " << slots << " slots  " << library << "\n";
+                }
+            }
             if (!plan.unresolvedSymbols.empty()) {
                 std::cout << "Maiores bloqueios (simbolo x slots):\n";
                 const size_t count =
@@ -213,6 +249,9 @@ int main(int argc, char* argv[]) {
                     if (!symbol.libraryName.empty()) {
                         std::cout << "  (" << symbol.libraryName << " / "
                                   << symbol.symbolName << ")";
+                    } else if (!symbol.suffixLibrary.empty()) {
+                        std::cout << "  (" << symbol.suffixLibrary << " / "
+                                  << symbol.suffixModule << ")";
                     }
                     std::cout << "\n";
                 }
