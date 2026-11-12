@@ -52,6 +52,9 @@ uint64_t NidResolver::DecodeBase64Nid(const std::string& encoded) {
         }
     }
 
+    // The encoded bytes are the first 8 digest bytes in reverse order, so
+    // reading them big-endian yields the same integer as ComputeNid (which
+    // treats the digest as little-endian).
     uint64_t result = 0;
     for (uint8_t byte : bytes) result = (result << 8) | byte;
     return result;
@@ -407,6 +410,11 @@ void* NidResolver::ResolveByHash(uint64_t nidHash) const {
         return it->second.stubAddress;
     }
     return nullptr;
+}
+
+const NidEntry* NidResolver::FindByHash(uint64_t nidHash) const {
+    const auto it = m_table.find(nidHash);
+    return it == m_table.end() ? nullptr : &it->second;
 }
 
 } // namespace AstroPort

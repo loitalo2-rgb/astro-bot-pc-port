@@ -53,6 +53,7 @@ add_library(AstroBotCore STATIC
     src/input/input_manager.cpp
     src/core/eboot_loader.cpp
     src/core/nid_resolver.cpp
+    src/core/import_scanner.cpp
     src/core/dispatch_table.cpp
     src/assets/asset_loader.cpp
     src/assets/jxmd_parser.cpp
@@ -139,6 +140,15 @@ target_link_libraries(test_command_stream PRIVATE AstroBotCore)
 target_include_directories(test_command_stream PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME command_stream_validation COMMAND test_command_stream)
 
+add_executable(diag_imports src/diag_imports.cpp)
+target_link_libraries(diag_imports PRIVATE AstroBotCore)
+target_include_directories(diag_imports PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(test_imports src/test_imports.cpp)
+target_link_libraries(test_imports PRIVATE AstroBotCore)
+target_include_directories(test_imports PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME import_catalog_validation COMMAND test_imports)
+
 add_executable(test_audio_at9 src/test_audio_at9.cpp)
 target_link_libraries(test_audio_at9 PRIVATE AstroBotCore)
 target_include_directories(test_audio_at9 PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -177,9 +187,11 @@ if(WIN32)
         diag_census
         diag_gnf_validate
         diag_command_stream
+        diag_imports
         test_tex_load
         test_asset_census
         test_command_stream
+        test_imports
         test_audio_at9
         test_gameplay_movement
         test_level_collision

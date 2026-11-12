@@ -40,6 +40,14 @@ public:
     void* Resolve(const std::string& nidString) const;
     void* ResolveByHash(uint64_t nidHash) const;
 
+    // Consulta a entrada sem resolver para um stub (nullptr se o NID não é
+    // conhecido). Usada pelo catálogo offline de imports.
+    const NidEntry* FindByHash(uint64_t nidHash) const;
+
+    // Decodifica os 11 caracteres base64 de um NID para o mesmo inteiro que
+    // ComputeNid produz (primeiros 8 bytes do SHA-1 em little-endian).
+    static uint64_t DecodeBase64Nid(const std::string& encoded);
+
     // Computa o NID hash de um nome de função
     static uint64_t ComputeNid(const std::string& symbolName);
 
@@ -56,9 +64,6 @@ private:
     void Register(const std::string& symbolName, const std::string& library, void* stub);
 
     std::unordered_map<uint64_t, NidEntry> m_table;
-
-    // Parser do formato "NIDbase64#libhash#modhash"
-    static uint64_t DecodeBase64Nid(const std::string& encoded);
 };
 
 } // namespace AstroPort
