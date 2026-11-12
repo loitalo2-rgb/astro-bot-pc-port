@@ -52,3 +52,6 @@ Makefile
 
 # Capturas e artefatos brutos
 *.bmp
+
+# Referencia externa GPL usada apenas localmente para estudo (nao distribuir)
+/AnyPS5/
