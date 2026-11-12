@@ -187,6 +187,15 @@ int main() {
         expect(NidResolver::DecodeBase64Nid("f7uOxY9mM1U") ==
                    NidResolver::ComputeNid("__stack_chk_guard"),
                "__stack_chk_guard NID matches the real eboot");
+        expect(NidResolver::Get().GetCallableStub(
+                   NidResolver::ComputeNid("malloc")) != nullptr,
+               "malloc exposes a guest-callable stub (ABI bridge)");
+        expect(NidResolver::Get().GetCallableStub(
+                   NidResolver::ComputeNid("__gxx_personality_v0")) == nullptr,
+               "known symbol without stub has no callable address");
+        expect(NidResolver::Get().GetCallableStub(0x1234567890ABCDEFULL) ==
+                   nullptr,
+               "unknown NID has no callable address");
     }
 
     // --------------------------------------------------------------

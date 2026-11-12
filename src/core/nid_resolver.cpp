@@ -1,4 +1,5 @@
 #include "nid_resolver.h"
+#include "abi_bridge.h"
 #include "dispatch_table.h"
 #include "../stubs/sce_stubs.h"
 #include "../audio/audio_backend.h"
@@ -514,6 +515,12 @@ void* NidResolver::ResolveByHash(uint64_t nidHash) const {
 const NidEntry* NidResolver::FindByHash(uint64_t nidHash) const {
     const auto it = m_table.find(nidHash);
     return it == m_table.end() ? nullptr : &it->second;
+}
+
+void* NidResolver::GetCallableStub(uint64_t nidHash) const {
+    const NidEntry* entry = FindByHash(nidHash);
+    if (!entry || !entry->stubAddress) return nullptr;
+    return AbiBridge::Get().CreateIntegerThunk(entry->stubAddress);
 }
 
 } // namespace AstroPort

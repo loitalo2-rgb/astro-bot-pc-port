@@ -55,6 +55,7 @@ add_library(AstroBotCore STATIC
     src/core/nid_resolver.cpp
     src/core/import_scanner.cpp
     src/core/import_binding.cpp
+    src/core/abi_bridge.cpp
     src/core/dispatch_table.cpp
     src/assets/asset_loader.cpp
     src/assets/jxmd_parser.cpp
@@ -155,6 +156,11 @@ target_link_libraries(test_import_binding PRIVATE AstroBotCore)
 target_include_directories(test_import_binding PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME import_binding_validation COMMAND test_import_binding)
 
+add_executable(test_abi_bridge src/test_abi_bridge.cpp)
+target_link_libraries(test_abi_bridge PRIVATE AstroBotCore)
+target_include_directories(test_abi_bridge PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME abi_bridge_validation COMMAND test_abi_bridge)
+
 add_executable(test_audio_at9 src/test_audio_at9.cpp)
 target_link_libraries(test_audio_at9 PRIVATE AstroBotCore)
 target_include_directories(test_audio_at9 PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -199,6 +205,7 @@ if(WIN32)
         test_command_stream
         test_imports
         test_import_binding
+        test_abi_bridge
         test_audio_at9
         test_gameplay_movement
         test_level_collision

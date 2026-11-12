@@ -40,6 +40,12 @@ public:
     void* Resolve(const std::string& nidString) const;
     void* ResolveByHash(uint64_t nidHash) const;
 
+    // Endereco chamavel a partir do codigo do convidado (SysV AMD64). Quando
+    // ha stub, devolve um thunk da AbiBridge (ou o proprio stub em plataformas
+    // SysV); nullptr quando o NID nao tem stub. Nao cria thunk para stubs
+    // ausentes.
+    void* GetCallableStub(uint64_t nidHash) const;
+
     // Consulta a entrada sem resolver para um stub (nullptr se o NID não é
     // conhecido). Usada pelo catálogo offline de imports.
     const NidEntry* FindByHash(uint64_t nidHash) const;

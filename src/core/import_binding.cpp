@@ -470,10 +470,9 @@ bool ApplyElf64RelocationsWithImports(const uint8_t* bytes, size_t size,
         if (encoded.size() != 11) continue;
         const uint64_t nid = NidResolver::DecodeBase64Nid(encoded);
         if (nid == 0) continue;
-        const NidEntry* entry = resolver.FindByHash(nid);
-        if (entry && entry->stubAddress) {
-            resolved[symbolIndex] =
-                reinterpret_cast<uint64_t>(entry->stubAddress);
+        void* callable = resolver.GetCallableStub(nid);
+        if (callable) {
+            resolved[symbolIndex] = reinterpret_cast<uint64_t>(callable);
         }
     }
 

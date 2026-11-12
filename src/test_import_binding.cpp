@@ -210,17 +210,19 @@ int main() {
         expect(ReadValue(image.bytes, fixture.targetRelative, image.virtualBase) ==
                    image.virtualBase + fixture.addend,
                "RELATIVE slot = base + addend");
-        const uint64_t mallocAddress =
-            reinterpret_cast<uint64_t>(reinterpret_cast<void*>(&::malloc));
+        const uint64_t mallocAddress = reinterpret_cast<uint64_t>(
+            NidResolver::Get().GetCallableStub(
+                NidResolver::ComputeNid("malloc")));
+        expect(mallocAddress != 0, "malloc exposes a callable stub");
         expect(ReadValue(image.bytes, fixture.target64, image.virtualBase) ==
                    mallocAddress,
-               "R_X86_64_64 slot = malloc");
+               "R_X86_64_64 slot = callable malloc");
         expect(ReadValue(image.bytes, fixture.targetGlobDat,
                          image.virtualBase) == mallocAddress,
-               "GLOB_DAT slot = malloc");
+               "GLOB_DAT slot = callable malloc");
         expect(ReadValue(image.bytes, fixture.targetJumpSlot,
                          image.virtualBase) == mallocAddress,
-               "JUMP_SLOT slot = malloc");
+               "JUMP_SLOT slot = callable malloc");
     }
 
     // --------------------------------------------------------------
