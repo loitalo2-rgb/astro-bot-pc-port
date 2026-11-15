@@ -19,9 +19,15 @@ def load_config():
         config.read(CONFIG_PATH, encoding="utf-8")
     else:
         config["Graphics"] = {"width": "2560", "height": "1440", "fullscreen": "1", "vsync": "1", "fps_limit": "60", "perf_display": "0"}
-        config["Upscaler"] = {"backend": "fsr41", "quality": "quality", "sharpness": "85", "frame_generation": "1"}
+        config["Upscaler"] = {"backend": "fsr41", "quality": "performance", "sharpness": "85", "frame_generation": "1"}
         config["Controls"] = {"pad_type": "dualsense", "trigger_state": "1", "pad_motion": "1", "rumble_scale": "100"}
-        config["Engine_GPU"] = {"shader_cache": "1", "cache_title_id": "PPSA21567", "pipeline_prefetch": "1", "pipeline_prewarm": "1", "rt_software": "auto", "buffer_range_fixes": "1", "commit_epoch_fastpath": "0"}
+        config["Engine_GPU"] = {
+            "shader_cache": "1", "cache_title_id": "PPSA21567", "shader_precompile": "1",
+            "shader_precompile_threads": "8", "pipeline_prefetch": "1", "pipeline_prewarm": "1",
+            "stage_prep_parallel": "1", "texture_async_staging": "1", "submission_coalesce": "1",
+            "barrier_batch": "1", "rt_mode": "0", "rt_stub": "1", "buffer_range_fixes": "1",
+            "commit_epoch_fastpath": "0"
+        }
         config["CPU"] = {"cp_priority": "2", "draw_prep_priority": "2"}
         save_config(config)
     return config
@@ -33,8 +39,8 @@ def save_config(config):
 class AstroLauncherApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Astro Bot PC - Launcher & Painel de Controle (By: @loitalo2-rgb)")
-        self.geometry("680x620")
+        self.title("Astro Bot PC - Launcher & Otimizador de FPS (By: @loitalo2-rgb)")
+        self.geometry("700x670")
         self.resizable(False, False)
         self.config = load_config()
         self.configure(bg="#121826")
@@ -50,35 +56,34 @@ class AstroLauncherApp(tk.Tk):
         self.create_widgets()
 
     def create_widgets(self):
-        # Header
         header = ttk.Label(self, text="ASTRO BOT PC (Port Nativo PS5)", style="Header.TLabel")
-        header.pack(pady=(12, 1))
-        sub = ttk.Label(self, text="Upscaling AMD FSR 4.1 / FSR 3.1 / Intel XeSS, DualSense & Kyty Vulkan", style="SubHeader.TLabel")
-        sub.pack(pady=(0, 10))
+        header.pack(pady=(10, 1))
+        sub = ttk.Label(self, text="Otimizador de FPS nos Mundos, Pré-carregamento de Shaders & FSR/XeSS", style="SubHeader.TLabel")
+        sub.pack(pady=(0, 8))
 
-        main_frame = tk.Frame(self, bg="#1E293B", padx=18, pady=12, relief="ridge", bd=1)
-        main_frame.pack(fill="both", expand=True, padx=18, pady=(0, 10))
+        main_frame = tk.Frame(self, bg="#1E293B", padx=16, pady=10, relief="ridge", bd=1)
+        main_frame.pack(fill="both", expand=True, padx=16, pady=(0, 8))
 
         # 1. Resolução
         lbl_res = ttk.Label(main_frame, text="Resolução Alvo:")
-        lbl_res.grid(row=0, column=0, sticky="w", pady=5)
+        lbl_res.grid(row=0, column=0, sticky="w", pady=4)
         self.res_var = tk.StringVar()
         w = self.config.get("Graphics", "width", fallback="2560")
-        self.res_cb = ttk.Combobox(main_frame, textvariable=self.res_var, state="readonly", width=28)
-        self.res_cb["values"] = ("1920x1080 (Full HD)", "2560x1440 (2K Quad HD - Recomendado)", "3840x2160 (4K Ultra HD)")
+        self.res_cb = ttk.Combobox(main_frame, textvariable=self.res_var, state="readonly", width=30)
+        self.res_cb["values"] = ("1920x1080 (Full HD - Mais Fluido)", "2560x1440 (2K Quad HD - Recomendado)", "3840x2160 (4K Ultra HD)")
         if "3840" in w:
             self.res_cb.current(2)
         elif "2560" in w:
             self.res_cb.current(1)
         else:
             self.res_cb.current(0)
-        self.res_cb.grid(row=0, column=1, sticky="e", pady=5)
+        self.res_cb.grid(row=0, column=1, sticky="e", pady=4)
 
         # 2. Upscaler Backend
         lbl_up = ttk.Label(main_frame, text="Upscaler Dinâmico:")
-        lbl_up.grid(row=1, column=0, sticky="w", pady=5)
+        lbl_up.grid(row=1, column=0, sticky="w", pady=4)
         self.up_var = tk.StringVar()
-        self.up_cb = ttk.Combobox(main_frame, textvariable=self.up_var, state="readonly", width=28)
+        self.up_cb = ttk.Combobox(main_frame, textvariable=self.up_var, state="readonly", width=30)
         self.up_cb["values"] = (
             "AMD FSR 4.1 (Modelo Neural IA + RCAS)",
             "AMD FSR 3.1 (Temporal + Frame Gen)",
@@ -94,30 +99,30 @@ class AstroLauncherApp(tk.Tk):
             self.up_cb.current(3)
         else:
             self.up_cb.current(0)
-        self.up_cb.grid(row=1, column=1, sticky="e", pady=5)
+        self.up_cb.grid(row=1, column=1, sticky="e", pady=4)
 
         # 3. Qualidade do Upscaler
         lbl_qual = ttk.Label(main_frame, text="Qualidade do Upscaler:")
-        lbl_qual.grid(row=2, column=0, sticky="w", pady=5)
+        lbl_qual.grid(row=2, column=0, sticky="w", pady=4)
         self.qual_var = tk.StringVar()
-        self.qual_cb = ttk.Combobox(main_frame, textvariable=self.qual_var, state="readonly", width=28)
-        self.qual_cb["values"] = ("Qualidade (1.5x - Melhor Visual)", "Equilibrado (1.7x)", "Desempenho (2.0x - Mais FPS)", "Native AA (1.0x)")
-        q_cfg = self.config.get("Upscaler", "quality", fallback="quality")
+        self.qual_cb = ttk.Combobox(main_frame, textvariable=self.qual_var, state="readonly", width=30)
+        self.qual_cb["values"] = ("Desempenho (2.0x - Máximo FPS)", "Equilibrado (1.7x)", "Qualidade (1.5x - Melhor Visual)", "Native AA (1.0x)")
+        q_cfg = self.config.get("Upscaler", "quality", fallback="performance")
         if q_cfg == "balanced":
             self.qual_cb.current(1)
-        elif q_cfg == "performance":
+        elif q_cfg == "quality":
             self.qual_cb.current(2)
         elif q_cfg == "native_aa":
             self.qual_cb.current(3)
         else:
             self.qual_cb.current(0)
-        self.qual_cb.grid(row=2, column=1, sticky="e", pady=5)
+        self.qual_cb.grid(row=2, column=1, sticky="e", pady=4)
 
         # 4. Taxa de Quadros / VSync
         lbl_fps = ttk.Label(main_frame, text="Taxa de Quadros:")
-        lbl_fps.grid(row=3, column=0, sticky="w", pady=5)
+        lbl_fps.grid(row=3, column=0, sticky="w", pady=4)
         self.fps_var = tk.StringVar()
-        self.fps_cb = ttk.Combobox(main_frame, textvariable=self.fps_var, state="readonly", width=28)
+        self.fps_cb = ttk.Combobox(main_frame, textvariable=self.fps_var, state="readonly", width=30)
         self.fps_cb["values"] = ("60 FPS (VSync Estável)", "120 FPS (Alta Fluidez)", "Desbloqueado (FreeSync/G-Sync)")
         fps_cfg = self.config.get("Graphics", "fps_limit", fallback="60")
         if fps_cfg == "120":
@@ -126,56 +131,63 @@ class AstroLauncherApp(tk.Tk):
             self.fps_cb.current(2)
         else:
             self.fps_cb.current(0)
-        self.fps_cb.grid(row=3, column=1, sticky="e", pady=5)
+        self.fps_cb.grid(row=3, column=1, sticky="e", pady=4)
 
         # 5. Tipo de Controle
         lbl_pad = ttk.Label(main_frame, text="Perfil de Controle:")
-        lbl_pad.grid(row=4, column=0, sticky="w", pady=5)
+        lbl_pad.grid(row=4, column=0, sticky="w", pady=4)
         self.pad_var = tk.StringVar()
-        self.pad_cb = ttk.Combobox(main_frame, textvariable=self.pad_var, state="readonly", width=28)
+        self.pad_cb = ttk.Combobox(main_frame, textvariable=self.pad_var, state="readonly", width=30)
         self.pad_cb["values"] = ("DualSense PS5 (Hápticos + Gatilhos L2/R2)", "Controle Xbox / XInput", "Teclado e Mouse")
-        pad_cfg = self.config.get("Controls", "pad_type", fallback="dualsense")
-        if pad_cfg == "xbox":
-            self.pad_cb.current(1)
+        pad_cfg = self.config.get("Controls", "pad_type", fallback="xbox")
+        if pad_cfg == "dualsense":
+            self.pad_cb.current(0)
         elif pad_cfg == "keyboard":
             self.pad_cb.current(2)
         else:
-            self.pad_cb.current(0)
-        self.pad_cb.grid(row=4, column=1, sticky="e", pady=5)
+            self.pad_cb.current(1)
+        self.pad_cb.grid(row=4, column=1, sticky="e", pady=4)
 
-        # 6. Checkbox Frame Generation
+        # 6. OTIMIZAÇÃO CRÍTICA DE FPS: Desativar Software Ray Tracing
+        self.rt_fast_var = tk.BooleanVar(value=(self.config.get("Engine_GPU", "rt_mode", fallback="0") == "0"))
+        chk_rt = tk.Checkbutton(main_frame, text="🚀 Modo FPS Alto: Ignorar Ray-Tracing por Software (Resolve FPS baixo nos mundos)",
+                                variable=self.rt_fast_var, bg="#1E293B", fg="#38BDF8", font=("Segoe UI", 9, "bold"),
+                                selectcolor="#0F172A", activebackground="#1E293B", activeforeground="#38BDF8")
+        chk_rt.grid(row=5, column=0, columnspan=2, sticky="w", pady=4)
+
+        # 7. PRÉ-CARREGAR SHADERS (PAPP / PROGRAM CACHE)
+        self.precompile_var = tk.BooleanVar(value=(self.config.get("Engine_GPU", "shader_precompile", fallback="1") == "1"))
+        chk_pre = tk.Checkbutton(main_frame, text="⚡ Pré-carregar e Compilar Shaders em 8 Threads (Elimina micro-travadas)",
+                                 variable=self.precompile_var, bg="#1E293B", fg="#E2E8F0", selectcolor="#0F172A",
+                                 activebackground="#1E293B", activeforeground="#38BDF8")
+        chk_pre.grid(row=6, column=0, columnspan=2, sticky="w", pady=3)
+
+        # 8. Checkbox Frame Generation
         self.fg_var = tk.BooleanVar(value=(self.config.get("Upscaler", "frame_generation", fallback="1") == "1"))
-        chk_fg = tk.Checkbutton(main_frame, text="Ativar Frame Generation (Geração de Quadros por IA)",
+        chk_fg = tk.Checkbutton(main_frame, text="Geração de Quadros por IA (Frame Generation FSR 3.1/4.1)",
                                 variable=self.fg_var, bg="#1E293B", fg="#E2E8F0", selectcolor="#0F172A",
                                 activebackground="#1E293B", activeforeground="#38BDF8")
-        chk_fg.grid(row=5, column=0, columnspan=2, sticky="w", pady=4)
+        chk_fg.grid(row=7, column=0, columnspan=2, sticky="w", pady=3)
 
-        # 7. Checkbox Gatilhos Adaptativos e Sensores de Movimento
+        # 9. Checkbox Giroscópio
         self.motion_var = tk.BooleanVar(value=(self.config.get("Controls", "pad_motion", fallback="1") == "1"))
         chk_motion = tk.Checkbutton(main_frame, text="Ativar Giroscópio / Sensor de Movimento (Shake & Tilt)",
                                     variable=self.motion_var, bg="#1E293B", fg="#E2E8F0", selectcolor="#0F172A",
                                     activebackground="#1E293B", activeforeground="#38BDF8")
-        chk_motion.grid(row=6, column=0, columnspan=2, sticky="w", pady=4)
+        chk_motion.grid(row=8, column=0, columnspan=2, sticky="w", pady=3)
 
-        # 8. Checkbox Cache de Shaders Antecipado
-        self.cache_var = tk.BooleanVar(value=(self.config.get("Engine_GPU", "shader_cache", fallback="1") == "1"))
-        chk_cache = tk.Checkbutton(main_frame, text="Usar Shader & Pipeline Cache Vulkan (Elimina micro-travadas)",
-                                   variable=self.cache_var, bg="#1E293B", fg="#E2E8F0", selectcolor="#0F172A",
-                                   activebackground="#1E293B", activeforeground="#38BDF8")
-        chk_cache.grid(row=7, column=0, columnspan=2, sticky="w", pady=4)
-
-        # 9. Checkbox HUD de Desempenho
+        # 10. Checkbox HUD de Desempenho
         self.perf_var = tk.BooleanVar(value=(self.config.get("Graphics", "perf_display", fallback="0") == "1"))
         chk_perf = tk.Checkbutton(main_frame, text="Exibir HUD de Desempenho Nativo (FPS, CPU/GPU, VRAM)",
                                   variable=self.perf_var, bg="#1E293B", fg="#E2E8F0", selectcolor="#0F172A",
                                   activebackground="#1E293B", activeforeground="#38BDF8")
-        chk_perf.grid(row=8, column=0, columnspan=2, sticky="w", pady=4)
+        chk_perf.grid(row=9, column=0, columnspan=2, sticky="w", pady=3)
 
         # Botões inferiores
         btn_frame = tk.Frame(self, bg="#121826")
-        btn_frame.pack(fill="x", padx=18, pady=(0, 10))
+        btn_frame.pack(fill="x", padx=16, pady=(0, 10))
 
-        btn_launch = tk.Button(btn_frame, text="🚀 INICIAR ASTRO BOT COM UPSCALER", font=("Segoe UI", 11, "bold"),
+        btn_launch = tk.Button(btn_frame, text="🚀 INICIAR ASTRO BOT (ALTA PERFORMANCE)", font=("Segoe UI", 11, "bold"),
                                bg="#0284C7", fg="#FFFFFF", activebackground="#0369A1", activeforeground="#FFFFFF",
                                padx=15, pady=8, bd=0, cursor="hand2", command=self.launch_game)
         btn_launch.pack(fill="x", pady=(0, 6))
@@ -216,12 +228,12 @@ class AstroLauncherApp(tk.Tk):
         sel_q = self.qual_var.get()
         if "Equilibrado" in sel_q:
             self.config["Upscaler"]["quality"] = "balanced"
-        elif "Desempenho" in sel_q:
-            self.config["Upscaler"]["quality"] = "performance"
+        elif "Qualidade" in sel_q:
+            self.config["Upscaler"]["quality"] = "quality"
         elif "Native AA" in sel_q:
             self.config["Upscaler"]["quality"] = "native_aa"
         else:
-            self.config["Upscaler"]["quality"] = "quality"
+            self.config["Upscaler"]["quality"] = "performance"
 
         self.config["Upscaler"]["frame_generation"] = "1" if self.fg_var.get() else "0"
 
@@ -236,33 +248,41 @@ class AstroLauncherApp(tk.Tk):
             self.config["Graphics"]["vsync"] = "1"
 
         sel_pad = self.pad_var.get()
-        if "Xbox" in sel_pad:
-            self.config["Controls"]["pad_type"] = "xbox"
-            self.config["Controls"]["trigger_state"] = "0"
+        if "DualSense" in sel_pad:
+            self.config["Controls"]["pad_type"] = "dualsense"
+            self.config["Controls"]["trigger_state"] = "1"
         elif "Teclado" in sel_pad:
             self.config["Controls"]["pad_type"] = "keyboard"
         else:
-            self.config["Controls"]["pad_type"] = "dualsense"
-            self.config["Controls"]["trigger_state"] = "1"
+            self.config["Controls"]["pad_type"] = "xbox"
+            self.config["Controls"]["trigger_state"] = "0"
 
         self.config["Controls"]["pad_motion"] = "1" if self.motion_var.get() else "0"
-        self.config["Engine_GPU"]["shader_cache"] = "1" if self.cache_var.get() else "0"
+        self.config["Engine_GPU"]["shader_cache"] = "1"
+        self.config["Engine_GPU"]["shader_precompile"] = "1" if self.precompile_var.get() else "0"
+        self.config["Engine_GPU"]["rt_mode"] = "0" if self.rt_fast_var.get() else "1"
+        self.config["Engine_GPU"]["rt_stub"] = "1" if self.rt_fast_var.get() else "0"
         self.config["Graphics"]["perf_display"] = "1" if self.perf_var.get() else "0"
 
         save_config(self.config)
         self.write_launcher_bats()
         if show_message:
-            messagebox.showinfo("Configurações Salvas", "Configurações de Upscaling (FSR/XeSS), Vídeo e Controles salvas com sucesso!")
+            messagebox.showinfo("Configurações Salvas", "Configurações de FPS, Shaders e Vídeo salvas com sucesso!")
 
     def write_launcher_bats(self):
         w = self.config.get("Graphics", "width", fallback="2560")
         h = self.config.get("Graphics", "height", fallback="1440")
         up = self.config.get("Upscaler", "backend", fallback="fsr41")
-        qual = self.config.get("Upscaler", "quality", fallback="quality")
+        qual = self.config.get("Upscaler", "quality", fallback="performance")
         fg = self.config.get("Upscaler", "frame_generation", fallback="1")
         motion = self.config.get("Controls", "pad_motion", fallback="1")
-        trig = self.config.get("Controls", "trigger_state", fallback="1")
-        cache = self.config.get("Engine_GPU", "shader_cache", fallback="1")
+        trig = self.config.get("Controls", "trigger_state", fallback="0")
+        
+        rt_fast = (self.config.get("Engine_GPU", "rt_mode", fallback="0") == "0")
+        rt_soft = "0" if rt_fast else "auto"
+        rt_stub = "1" if rt_fast else "0"
+        
+        precompile = self.config.get("Engine_GPU", "shader_precompile", fallback="1")
         perf = self.config.get("Graphics", "perf_display", fallback="0")
         perf_flag = "true" if perf == "1" else "false"
 
@@ -271,8 +291,8 @@ title Astro Bot PC - Running
 cd /d "{RUN_HYBRID_DIR}"
 
 set APS5_GPU_ENGINE=kyty
-set "KYTY_BARRIER_BATCH="
-set "KYTY_DISPATCH_OVERLAP="
+set "KYTY_BARRIER_BATCH=1"
+set "KYTY_DISPATCH_OVERLAP=1"
 set "KYTY_WAVE64_WARPS="
 set "ASTROHYBRID_COMMIT_EPOCH_FASTPATH=0"
 set "KYTY_BUFFER_RANGE_FIXES=1"
@@ -282,10 +302,24 @@ set KYTY_GPU_HOST_MODULE=astrohybrid_host.dll
 set APS5_PAD_TRIGGER_STATE={trig}
 set APS5_SAVEDATA_TRANSFER_FALLBACK=1
 set ASTROHYBRID_PAD_MOTION={motion}
-set ASTROHYBRID_SHADER_CACHE={cache}
+set ASTROHYBRID_SHADER_CACHE=1
+
+rem OTIMIZACOES DE FPS NOS MUNDOS E PRE-COMPILACAO DE SHADERS
+set KYTY_RT_SOFTWARE={rt_soft}
+set KYTY_RT_STUB={rt_stub}
+set KYTY_SHADER_PRECOMPILE={precompile}
+set KYTY_SHADER_PRECOMPILE_THREADS=8
+set KYTY_PIPELINE_PREWARM_COMPUTE=1
+set KYTY_PIPELINE_PREFETCH=1
+set KYTY_PIPELINE_PREFETCH_PROGRAMS=1
+set KYTY_STAGE_PREP_PARALLEL=1
+set KYTY_TEXTURE_ASYNC_STAGING=1
+set KYTY_SUBMISSION_COALESCE=1
+
 set ASTRO_UPSCALER_BACKEND={up}
 set ASTRO_UPSCALER_QUALITY={qual}
 set ASTRO_FRAME_GENERATION={fg}
+
 set KYTY_CP_PRIORITY=2
 set KYTY_DRAW_PREP_PRIORITY=2
 set KYTY_DRAW_PREP_SPIN_US=10
@@ -296,7 +330,9 @@ set KYTY_GPU_HEIGHT={h}
 if exist "u59-preset.cmd" call "u59-preset.cmd"
 
 echo ========================================================
-echo   Iniciando Astro Bot PC ({w}x{h})
+echo   Iniciando Astro Bot PC ({w}x{h}) - Modo Alta Performance
+echo   Ray-Tracing: {"DESATIVADO (FPS MAXIMO)" if rt_fast else "SOFTWARE RT"}
+echo   Shader Precompile: {"8 THREADS ATIVAS" if precompile == "1" else "DESATIVADO"}
 echo   Upscaler: {up.upper()} ({qual.upper()}) ^| FrameGen: {fg}
 echo   GPU: AMD Radeon RX 9060 XT (16 GB VRAM)
 echo ========================================================
@@ -315,11 +351,9 @@ if %ERRORLEVEL% NEQ 0 (
     def launch_game(self):
         try:
             self.apply_settings(show_message=False)
-            # Executa com ShellExecute (mesmo efeito de clicar 2x no batch)
             os.startfile(LAUNCH_BAT)
             self.destroy()
         except Exception as e:
-            # Fallback caso startfile falhe
             try:
                 subprocess.Popen(["cmd.exe", "/c", "start", "Astro Bot PC", LAUNCH_BAT], shell=True)
                 self.destroy()

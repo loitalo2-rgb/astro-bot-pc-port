@@ -3,8 +3,8 @@ title Astro Bot PC - Running
 cd /d "D:\Jogos ps4\AstroHybrid\AstroBotPC-AstroHybrid-1.0.9\Build\RunHybrid"
 
 set APS5_GPU_ENGINE=kyty
-set "KYTY_BARRIER_BATCH="
-set "KYTY_DISPATCH_OVERLAP="
+set "KYTY_BARRIER_BATCH=1"
+set "KYTY_DISPATCH_OVERLAP=1"
 set "KYTY_WAVE64_WARPS="
 set "ASTROHYBRID_COMMIT_EPOCH_FASTPATH=0"
 set "KYTY_BUFFER_RANGE_FIXES=1"
@@ -15,9 +15,23 @@ set APS5_PAD_TRIGGER_STATE=0
 set APS5_SAVEDATA_TRANSFER_FALLBACK=1
 set ASTROHYBRID_PAD_MOTION=1
 set ASTROHYBRID_SHADER_CACHE=1
+
+rem OTIMIZACOES DE FPS NOS MUNDOS E PRE-COMPILACAO DE SHADERS
+set KYTY_RT_SOFTWARE=0
+set KYTY_RT_STUB=1
+set KYTY_SHADER_PRECOMPILE=1
+set KYTY_SHADER_PRECOMPILE_THREADS=8
+set KYTY_PIPELINE_PREWARM_COMPUTE=1
+set KYTY_PIPELINE_PREFETCH=1
+set KYTY_PIPELINE_PREFETCH_PROGRAMS=1
+set KYTY_STAGE_PREP_PARALLEL=1
+set KYTY_TEXTURE_ASYNC_STAGING=1
+set KYTY_SUBMISSION_COALESCE=1
+
 set ASTRO_UPSCALER_BACKEND=fsr41
 set ASTRO_UPSCALER_QUALITY=performance
 set ASTRO_FRAME_GENERATION=1
+
 set KYTY_CP_PRIORITY=2
 set KYTY_DRAW_PREP_PRIORITY=2
 set KYTY_DRAW_PREP_SPIN_US=10
@@ -28,7 +42,9 @@ set KYTY_GPU_HEIGHT=1440
 if exist "u59-preset.cmd" call "u59-preset.cmd"
 
 echo ========================================================
-echo   Iniciando Astro Bot PC (2560x1440)
+echo   Iniciando Astro Bot PC (2560x1440) - Modo Alta Performance
+echo   Ray-Tracing: DESATIVADO (FPS MAXIMO)
+echo   Shader Precompile: 8 THREADS ATIVAS
 echo   Upscaler: FSR41 (PERFORMANCE) ^| FrameGen: 1
 echo   GPU: AMD Radeon RX 9060 XT (16 GB VRAM)
 echo ========================================================
