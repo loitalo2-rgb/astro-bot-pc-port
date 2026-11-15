@@ -12,9 +12,13 @@ Este projeto reúne ferramentas de desenvolvimento, parsers de assets (como form
 - **Recompilação Estática Completa:** Executável original desempacotado (`eboot.bin` -> `eboot.elf`) e relinkado para formato nativo Windows x86-64 (PE).
 - **Tradução de Instruções AMD -> Intel:** Conversão e emulação de 14.973 instruções exclusivas AMD Zen 2 para execução fluida em CPUs Intel Core (`--to-intel`).
 - **Módulos Proprietários Resolvidos:** Descompactação e conversão de `sce_module/libSceNpCppWebApi.prx` e `libc.prx` para Windows (`.guest.prx`), resolvendo todas as 2.930 referências externas.
+- **Suíte de Upscalers Integrados:**
+  - **AMD FSR 4.1:** Modelo neural de IA de próxima geração com 142 passes de computação SPIR-V e nitidez RCAS.
+  - **AMD FSR 3.1:** Upscaler temporal de alta fidelidade e interpolação de quadros (Frame Generation).
+  - **Intel XeSS 1.3+:** Super sampling assistido por IA e instruções DP4a/XMX.
 - **Backend Gráfico:** Integração com Kyty GPU Vulkan 1.3, alocando 64 GiB de memória guest, suporte a Ray Tracing via software / compute BVH e shaders SPIR-V.
 - **Execução Comprovada em Tempo Real:** 5,42 GB de RAM em uso, carregamento do nível `worldmap`, fontes `NotoSans`, resposta háptica e processamento de mais de 105.000 draw calls.
-- **Inicializador Direto:** Script `Iniciar_AstroBot_PC.bat` para inicialização imediata no Windows.
+- **Painel de Controle e Inicializadores:** App gráfico `astro_launcher.py`, `Painel_de_Controle.bat` e presets para 1080p, 1440p e 4K Ultra HD.
 
 ## 📂 Estrutura do Repositório
 - `src/`: Código-fonte em C++ para carregamento de executáveis (`eboot.bin`), recompiler de shaders, backend Vulkan, gerenciamento de áudio, kernel e assets.

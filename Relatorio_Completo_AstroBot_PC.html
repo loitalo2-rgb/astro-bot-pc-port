@@ -457,5 +457,26 @@
         </li>
     </ul>
 
+
+    <h2>Capítulo 11 — Integração de Upscalers de Próxima Geração: AMD FSR 4.1, AMD FSR 3.1 (Frame Generation) e Intel XeSS 1.3+</h2>
+    <ul>
+        <li><strong>Arquitetura de Super Resolução & Reconstrução Temporal Unificada:</strong>
+            <ul>
+                <li><strong>AMD FSR 4.1 (Modelo Neural de IA):</strong>
+                    Incorporação do modelo FSR 4.1 baseado em inferência de rede neural via compute shaders SPIR-V com 142 passes dedicados (modelos <code>v07_i8</code> em modos <code>Native</code>, <code>Quality</code>, <code>Balanced</code>, <code>Performance</code> e <code>UltraPerformance</code> para 1080p e 2160p 4K). Aplicação de filtragem de nitidez RCAS (Robust Contrast Adaptive Sharpening).
+                </li>
+                <li><strong>AMD FSR 3.1 & Frame Generation:</strong>
+                    Suporte ao upscaler temporal FSR 3.1 e geração interpolada de quadros, gerando sequências de subpixel jittering baseadas na matriz de Halton (2,3) para eliminar aliasing e duplicar a taxa de quadros percebida na GPU AMD Radeon RX 9060 XT.
+                </li>
+                <li><strong>Intel XeSS 1.3+ (Xe Super Sampling):</strong>
+                    Módulo de super-amostragem com suporte a instruções vetoriais DP4a e matrizes XMX, permitindo reconstrução de alta qualidade e nitidez espacial mesmo em hardwares híbridos Intel + AMD.
+                </li>
+                <li><strong>Validação Automatizada de Upscaling (<code>test_upscaler.exe</code>):</strong>
+                    Implementada suíte de testes em C++20 em <code>src/gpu/upscaler_manager.cpp</code> validando os cálculos de resolução dinâmica (1708x960 &rarr; 2560x1440 em Qualidade e 1920x1080 &rarr; 3840x2160 em Performance), amostragem de jitter temporal e integridade dos 142 shaders SPIR-V.
+                </li>
+            </ul>
+        </li>
+    </ul>
+
 </body>
 </html>
