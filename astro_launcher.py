@@ -5,10 +5,13 @@ import configparser
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "astro_config.ini")
+WORKSPACE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(WORKSPACE_DIR, "astro_config.ini")
 HYBRID_DIR = r"D:\Jogos ps4\AstroHybrid\AstroBotPC-AstroHybrid-1.0.9"
 RUN_HYBRID_DIR = os.path.join(HYBRID_DIR, "Build", "RunHybrid")
-PDF_REPORT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Relatorio_Completo_AstroBot_PC.pdf")
+PDF_REPORT = os.path.join(WORKSPACE_DIR, "Relatorio_Completo_AstroBot_PC.pdf")
+LAUNCH_BAT = os.path.join(HYBRID_DIR, "Launch.bat")
+WORKSPACE_BAT = os.path.join(WORKSPACE_DIR, "Iniciar_AstroBot_PC.bat")
 
 def load_config():
     config = configparser.ConfigParser()
@@ -30,7 +33,7 @@ def save_config(config):
 class AstroLauncherApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Astro Bot PC - Launcher & Upscalers (FSR 4.1 / 3.1 / XeSS) (By: @loitalo2-rgb)")
+        self.title("Astro Bot PC - Launcher & Painel de Controle (By: @loitalo2-rgb)")
         self.geometry("680x620")
         self.resizable(False, False)
         self.config = load_config()
@@ -71,7 +74,7 @@ class AstroLauncherApp(tk.Tk):
             self.res_cb.current(0)
         self.res_cb.grid(row=0, column=1, sticky="e", pady=5)
 
-        # 2. Upscaler Backend (FSR 4.1 / FSR 3.1 / Intel XeSS / Nativo)
+        # 2. Upscaler Backend
         lbl_up = ttk.Label(main_frame, text="Upscaler Dinâmico:")
         lbl_up.grid(row=1, column=0, sticky="w", pady=5)
         self.up_var = tk.StringVar()
@@ -140,7 +143,7 @@ class AstroLauncherApp(tk.Tk):
             self.pad_cb.current(0)
         self.pad_cb.grid(row=4, column=1, sticky="e", pady=5)
 
-        # 6. Checkbox Frame Generation (FSR 3.1 / 4.1)
+        # 6. Checkbox Frame Generation
         self.fg_var = tk.BooleanVar(value=(self.config.get("Upscaler", "frame_generation", fallback="1") == "1"))
         chk_fg = tk.Checkbutton(main_frame, text="Ativar Frame Generation (Geração de Quadros por IA)",
                                 variable=self.fg_var, bg="#1E293B", fg="#E2E8F0", selectcolor="#0F172A",
@@ -154,14 +157,14 @@ class AstroLauncherApp(tk.Tk):
                                     activebackground="#1E293B", activeforeground="#38BDF8")
         chk_motion.grid(row=6, column=0, columnspan=2, sticky="w", pady=4)
 
-        # 8. Checkbox Cache de Shaders Antecipado (Zero Stutter)
+        # 8. Checkbox Cache de Shaders Antecipado
         self.cache_var = tk.BooleanVar(value=(self.config.get("Engine_GPU", "shader_cache", fallback="1") == "1"))
         chk_cache = tk.Checkbutton(main_frame, text="Usar Shader & Pipeline Cache Vulkan (Elimina micro-travadas)",
                                    variable=self.cache_var, bg="#1E293B", fg="#E2E8F0", selectcolor="#0F172A",
                                    activebackground="#1E293B", activeforeground="#38BDF8")
         chk_cache.grid(row=7, column=0, columnspan=2, sticky="w", pady=4)
 
-        # 9. Checkbox HUD de Desempenho (FPS na tela)
+        # 9. Checkbox HUD de Desempenho
         self.perf_var = tk.BooleanVar(value=(self.config.get("Graphics", "perf_display", fallback="0") == "1"))
         chk_perf = tk.Checkbutton(main_frame, text="Exibir HUD de Desempenho Nativo (FPS, CPU/GPU, VRAM)",
                                   variable=self.perf_var, bg="#1E293B", fg="#E2E8F0", selectcolor="#0F172A",
@@ -174,21 +177,21 @@ class AstroLauncherApp(tk.Tk):
 
         btn_launch = tk.Button(btn_frame, text="🚀 INICIAR ASTRO BOT COM UPSCALER", font=("Segoe UI", 11, "bold"),
                                bg="#0284C7", fg="#FFFFFF", activebackground="#0369A1", activeforeground="#FFFFFF",
-                               padx=15, pady=7, bd=0, cursor="hand2", command=self.launch_game)
+                               padx=15, pady=8, bd=0, cursor="hand2", command=self.launch_game)
         btn_launch.pack(fill="x", pady=(0, 6))
 
         sub_btn_frame = tk.Frame(btn_frame, bg="#121826")
         sub_btn_frame.pack(fill="x")
 
         btn_save = tk.Button(sub_btn_frame, text="💾 Salvar Configurações", font=("Segoe UI", 9),
-                             bg="#334155", fg="#F8FAFC", bd=0, padx=10, pady=5, cursor="hand2", command=self.apply_settings)
+                             bg="#334155", fg="#F8FAFC", bd=0, padx=10, pady=5, cursor="hand2", command=lambda: self.apply_settings(show_message=True))
         btn_save.pack(side="left", expand=True, fill="x", padx=(0, 4))
 
         btn_pdf = tk.Button(sub_btn_frame, text="📄 Abrir Relatório PDF", font=("Segoe UI", 9),
                             bg="#334155", fg="#F8FAFC", bd=0, padx=10, pady=5, cursor="hand2", command=self.open_pdf)
         btn_pdf.pack(side="left", expand=True, fill="x", padx=(4, 0))
 
-    def apply_settings(self):
+    def apply_settings(self, show_message=False):
         sel_res = self.res_var.get()
         if "3840" in sel_res:
             w, h = "3840", "2160"
@@ -247,10 +250,11 @@ class AstroLauncherApp(tk.Tk):
         self.config["Graphics"]["perf_display"] = "1" if self.perf_var.get() else "0"
 
         save_config(self.config)
-        self.write_launcher_bat()
-        messagebox.showinfo("Configurações Salvas", "Configurações de Upscaling (FSR/XeSS), Vídeo e Controles salvas com sucesso!")
+        self.write_launcher_bats()
+        if show_message:
+            messagebox.showinfo("Configurações Salvas", "Configurações de Upscaling (FSR/XeSS), Vídeo e Controles salvas com sucesso!")
 
-    def write_launcher_bat(self):
+    def write_launcher_bats(self):
         w = self.config.get("Graphics", "width", fallback="2560")
         h = self.config.get("Graphics", "height", fallback="1440")
         up = self.config.get("Upscaler", "backend", fallback="fsr41")
@@ -263,7 +267,7 @@ class AstroLauncherApp(tk.Tk):
         perf_flag = "true" if perf == "1" else "false"
 
         bat_content = f"""@echo off
-setlocal
+title Astro Bot PC - Running
 cd /d "{RUN_HYBRID_DIR}"
 
 set APS5_GPU_ENGINE=kyty
@@ -293,20 +297,34 @@ if exist "u59-preset.cmd" call "u59-preset.cmd"
 
 echo ========================================================
 echo   Iniciando Astro Bot PC ({w}x{h})
-echo   Upscaler: {up.upper()} ({qual.upper()}) | FrameGen: {fg}
+echo   Upscaler: {up.upper()} ({qual.upper()}) ^| FrameGen: {fg}
 echo   GPU: AMD Radeon RX 9060 XT (16 GB VRAM)
 echo ========================================================
 AstroBot.exe -perfDisplay {perf_flag} %*
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo O jogo encerrou com codigo %ERRORLEVEL%
+    pause
+)
 """
-        target_bat = os.path.join(HYBRID_DIR, "Launch.bat")
-        with open(target_bat, "w", encoding="utf-8") as f:
+        with open(LAUNCH_BAT, "w", encoding="utf-8") as f:
+            f.write(bat_content)
+        with open(WORKSPACE_BAT, "w", encoding="utf-8") as f:
             f.write(bat_content)
 
     def launch_game(self):
-        self.apply_settings()
-        target_bat = os.path.join(HYBRID_DIR, "Launch.bat")
-        subprocess.Popen(["cmd.exe", "/c", target_bat], cwd=RUN_HYBRID_DIR)
-        self.destroy()
+        try:
+            self.apply_settings(show_message=False)
+            # Executa com ShellExecute (mesmo efeito de clicar 2x no batch)
+            os.startfile(LAUNCH_BAT)
+            self.destroy()
+        except Exception as e:
+            # Fallback caso startfile falhe
+            try:
+                subprocess.Popen(["cmd.exe", "/c", "start", "Astro Bot PC", LAUNCH_BAT], shell=True)
+                self.destroy()
+            except Exception as e2:
+                messagebox.showerror("Erro ao Iniciar", f"Não foi possível abrir o jogo:\n{e}\n{e2}")
 
     def open_pdf(self):
         if os.path.exists(PDF_REPORT):
