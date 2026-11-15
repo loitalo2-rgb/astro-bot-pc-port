@@ -436,5 +436,26 @@
         </li>
     </ul>
 
+
+    <h2>Capítulo 10 — Suíte Completa de Melhorias: Resoluções 1080p/1440p/4K, Otimização de Shaders, Calibração de Controles e Painel de Configurações</h2>
+    <ul>
+        <li><strong>Implementação da Suíte Completa de Otimizações:</strong>
+            <ul>
+                <li><strong>1. Calibração e Suporte Avançado de Controles (DualSense & XInput):</strong>
+                    Integração das diretivas <code>APS5_PAD_TRIGGER_STATE=1</code> e <code>ASTROHYBRID_PAD_MOTION=1</code> para resposta física completa dos gatilhos adaptativos L2/R2, giroscópio (shake & tilt) e curva de rumble escalonável de 0 a 200%.
+                </li>
+                <li><strong>2. Perfis de Alta Resolução e Taxa de Quadros:</strong>
+                    Criação de inicializadores dedicados para <strong>1080p (Full HD)</strong>, <strong>1440p (2K Quad HD)</strong> e <strong>3840x2160 (4K Ultra HD)</strong>, explorando toda a largura de banda e os 16 GB de VRAM da AMD Radeon RX 9060 XT. Suporte a VSync adaptativo e taxas de quadros desbloqueadas para monitores de alta frequência (120 Hz / 144 Hz).
+                </li>
+                <li><strong>3. Otimização de Shaders e Zero-Stutter Pipeline:</strong>
+                    Geração e pré-aquecimento contínuo de <code>PPSA21567.programs.bin</code> (115,7 MB) e <code>PPSA21567.bin</code> (33,8 MB) no diretório <code>_PipelineCache</code>, assegurando carregamentos instantâneos de fases e transições no <code>worldmap</code> sem engasgos de compilação em tempo real.
+                </li>
+                <li><strong>4. Painel de Controle Visual e Launcher Interativo:</strong>
+                    Desenvolvimento da aplicação gráfica <code>astro_launcher.py</code> (com inicializador <code>Painel_de_Controle.bat</code>), permitindo alternar resoluções, ligar/desligar HUD de FPS nativo (<code>-perfDisplay</code>), selecionar tipo de controle e abrir o relatório técnico com um clique.
+                </li>
+            </ul>
+        </li>
+    </ul>
+
 </body>
 </html>
