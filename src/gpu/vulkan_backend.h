@@ -2,6 +2,7 @@
 
 #include "../common/types.h"
 #include "vulkan_types.h"
+#include "command_stream.h"
 #include "../assets/asset_loader.h"
 #include <cstdint>
 #include <string>
@@ -63,6 +64,12 @@ public:
     void DestroyShaderModule(uint64_t shaderModuleHandle);
 
     bool IsVulkanReady() const { return m_vulkanReady; }
+
+    // Gravador neutro de comandos da porta (formato AGCR). Permite inspecionar,
+    // validar e reproduzir os frames sem GPU e sem executar codigo do jogo.
+    GpuCommandRecorder& GetCommandRecorder() { return m_recorder; }
+    const GpuCommandRecorder& GetCommandRecorder() const { return m_recorder; }
+    bool DumpCommandStream(const std::string& path, std::string& error) const;
 
 private:
     VulkanBackend() = default;
@@ -140,6 +147,8 @@ private:
     float m_horizontalOffset = 0.0f;
 
     GpuDeviceInfo m_selectedGpu;
+
+    GpuCommandRecorder m_recorder;
 
     bool DetectGpuHardware();
     bool InitRealVulkan();

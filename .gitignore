@@ -11,3 +11,9 @@
 *.spv
 *.cache
 .DS_Store
+eboot.bin
+*.bin
+cache/
+dkb-pc-recomp/
+*.szd
+

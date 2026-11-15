@@ -1,4 +1,5 @@
 #include "nid_resolver.h"
+#include "abi_bridge.h"
 #include "dispatch_table.h"
 #include "../stubs/sce_stubs.h"
 #include "../audio/audio_backend.h"
@@ -6,6 +7,7 @@
 #include "../kernel/kernel_emulator.h"
 #include <iostream>
 #include <cstring>
+#include <cstdlib>
 #include <chrono>
 #include <array>
 #include <iterator>
@@ -52,6 +54,9 @@ uint64_t NidResolver::DecodeBase64Nid(const std::string& encoded) {
         }
     }
 
+    // The encoded bytes are the first 8 digest bytes in reverse order, so
+    // reading them big-endian yields the same integer as ComputeNid (which
+    // treats the digest as little-endian).
     uint64_t result = 0;
     for (uint8_t byte : bytes) result = (result << 8) | byte;
     return result;
@@ -294,6 +299,104 @@ void NidResolver::BuildTable() {
     Register("strtol",   "libc", (void*)::strtol);
     Register("strtod",   "libc", (void*)::strtod);
 
+    // --- libc: simbolos identificados por forca bruta sobre a tabela real ---
+    // Os nomes abaixo foram recuperados aplicando o proprio algoritmo de NID
+    // (SHA-1 + salt SCE) a nomes padrao de C/C++ e conferindo a presenca no
+    // eboot. Nenhuma base externa de NIDs foi copiada. Sem stub nativo, o
+    // resolvedor apenas reconhece o nome e reporta a ausencia de vinculo; a
+    // chamada real continua impossivel ate existir a ponte de ABI SysV->Win64.
+    Register("memmove",             "libc", nullptr);
+    Register("memchr",              "libc", nullptr);
+    Register("bcmp",                "libc", nullptr);
+    Register("strcpy",              "libc", nullptr);
+    Register("strncat",             "libc", nullptr);
+    Register("strcasecmp",          "libc", nullptr);
+    Register("strncasecmp",         "libc", nullptr);
+    Register("calloc",              "libc", nullptr);
+    Register("aligned_alloc",       "libc", nullptr);
+    Register("posix_memalign",      "libc", nullptr);
+    Register("memalign",            "libc", nullptr);
+    Register("strtof",              "libc", nullptr);
+    Register("strtoull",            "libc", nullptr);
+    Register("strtoumax",           "libc", nullptr);
+    Register("wcslen",              "libc", nullptr);
+    Register("strerror",            "libc", nullptr);
+    Register("perror",              "libc", nullptr);
+    Register("asctime",             "libc", nullptr);
+    Register("puts",                "libc", nullptr);
+    Register("fputs",               "libc", nullptr);
+    Register("putchar",             "libc", nullptr);
+    Register("fgetc",               "libc", nullptr);
+    Register("fflush",              "libc", nullptr);
+    Register("feof",                "libc", nullptr);
+    Register("setvbuf",             "libc", nullptr);
+    Register("vfprintf",            "libc", nullptr);
+    Register("vsprintf",            "libc", nullptr);
+    Register("vsnprintf",           "libc", nullptr);
+    Register("sscanf",              "libc", nullptr);
+
+    // --- libc: matematica (argumentos em XMM, sem varargs) ---
+    // Ainda sem stub para nao presumir compatibilidade de ABI sem teste.
+    Register("powf",                "libc", nullptr);
+    Register("pow",                 "libc", nullptr);
+    Register("sinf",                "libc", nullptr);
+    Register("sin",                 "libc", nullptr);
+    Register("cos",                 "libc", nullptr);
+    Register("tanf",                "libc", nullptr);
+    Register("tan",                 "libc", nullptr);
+    Register("expf",                "libc", nullptr);
+    Register("exp2",                "libc", nullptr);
+    Register("logf",                "libc", nullptr);
+    Register("log2f",               "libc", nullptr);
+    Register("log10f",              "libc", nullptr);
+    Register("log10",               "libc", nullptr);
+    Register("fmod",                "libc", nullptr);
+    Register("ldexpf",              "libc", nullptr);
+
+    // --- libc: threads, semaforos e tempo (exigem emulacao, nao repasse) ---
+    Register("pthread_mutex_lock",      "libc", nullptr);
+    Register("pthread_mutex_unlock",    "libc", nullptr);
+    Register("pthread_mutex_init",      "libc", nullptr);
+    Register("pthread_mutex_destroy",   "libc", nullptr);
+    Register("pthread_self",            "libc", nullptr);
+    Register("pthread_key_create",      "libc", nullptr);
+    Register("pthread_setspecific",     "libc", nullptr);
+    Register("sem_init",                "libc", nullptr);
+    Register("sem_destroy",             "libc", nullptr);
+    Register("sem_wait",                "libc", nullptr);
+    Register("sem_post",                "libc", nullptr);
+    Register("time",                    "libc", nullptr);
+    Register("clock",                   "libc", nullptr);
+    Register("usleep",                  "libc", nullptr);
+    Register("atexit",                  "libc", nullptr);
+
+    // --- libc/C++ runtime: nomes conhecidos, sem semantica implementada ---
+    Register("__gxx_personality_v0",    "libc", nullptr);
+    Register("__stack_chk_guard",       "libc", nullptr);
+    Register("__cxa_atexit",            "libc", nullptr);
+    Register("__cxa_guard_acquire",     "libc", nullptr);
+    Register("__cxa_guard_release",     "libc", nullptr);
+    Register("__cxa_throw",             "libc", nullptr);
+    Register("__cxa_begin_catch",       "libc", nullptr);
+    Register("__cxa_end_catch",         "libc", nullptr);
+    Register("__cxa_rethrow",           "libc", nullptr);
+    Register("_Unwind_Resume",          "libc", nullptr);
+    Register("_ZSt9terminatev",         "libc", nullptr);
+    Register("_Znwm",                   "libc", nullptr);
+    Register("_Znam",                   "libc", nullptr);
+    Register("_ZdlPv",                  "libc", nullptr);
+    Register("_ZdaPv",                  "libc", nullptr);
+
+    // --- libc: falhas fatais, stubs sem argumentos (seguros na ABI atual) ---
+    Register("__cxa_pure_virtual", "libc", (void*)+[]() -> int32_t {
+        std::cerr << "[NidResolver] __cxa_pure_virtual chamado; abortando.\n";
+        std::abort();
+    });
+    Register("__stack_chk_fail", "libc", (void*)+[]() -> int32_t {
+        std::cerr << "[NidResolver] __stack_chk_fail: corrupcao de pilha; abortando.\n";
+        std::abort();
+    });
+
     // --- libSceSysmodule.prx ---
     Register("sceSysmoduleLoadModule",   "libSceSysmodule", (void*)Stubs::scePsmlInitialize);
     Register("sceSysmoduleUnloadModule", "libSceSysmodule", (void*)Stubs::scePsmlTerminate);
@@ -407,6 +510,17 @@ void* NidResolver::ResolveByHash(uint64_t nidHash) const {
         return it->second.stubAddress;
     }
     return nullptr;
+}
+
+const NidEntry* NidResolver::FindByHash(uint64_t nidHash) const {
+    const auto it = m_table.find(nidHash);
+    return it == m_table.end() ? nullptr : &it->second;
+}
+
+void* NidResolver::GetCallableStub(uint64_t nidHash) const {
+    const NidEntry* entry = FindByHash(nidHash);
+    if (!entry || !entry->stubAddress) return nullptr;
+    return AbiBridge::Get().CreateIntegerThunk(entry->stubAddress);
 }
 
 } // namespace AstroPort

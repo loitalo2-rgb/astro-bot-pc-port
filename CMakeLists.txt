@@ -11,7 +11,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Configurações de Build
 # -------------------------------------------------------------------------
 if(MSVC)
-    # Máxima otimização para Release
     set(CMAKE_CXX_FLAGS_RELEASE "/O2 /GL /DNDEBUG")
     set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/LTCG")
     add_compile_options(/W4 /utf-8)
@@ -39,65 +38,14 @@ target_include_directories(Atrac9 PUBLIC "${libatrac9_SOURCE_DIR}/C/src")
 target_compile_definitions(Atrac9 PRIVATE COMPILING_DLL)
 
 # -------------------------------------------------------------------------
-# Arquivos de Código-Fonte
-# -------------------------------------------------------------------------
-set(SOURCES
-    src/main.cpp
-
-    src/config/config_manager.h
-    src/config/config_manager.cpp
-
-    src/patches/patch_manager.h
-    src/patches/patch_manager.cpp
-
-    src/kernel/kernel_emulator.h
-    src/kernel/kernel_emulator.cpp
-
-    src/gpu/vulkan_backend.h
-    src/gpu/vulkan_backend.cpp
-
-    src/gpu/vulkan_loader.h
-    src/gpu/vulkan_loader.cpp
-
-    src/gpu/shader_recompiler.h
-    src/gpu/shader_recompiler.cpp
-
-    src/audio/audio_backend.h
-    src/audio/audio_backend.cpp
-
-    src/input/input_manager.h
-    src/input/input_manager.cpp
-
-    src/core/eboot_loader.h
-    src/core/eboot_loader.cpp
-
-    src/core/nid_resolver.h
-    src/core/nid_resolver.cpp
-
-    src/assets/asset_loader.h
-    src/assets/asset_loader.cpp
-    src/assets/jxmd_parser.h
-    src/assets/jxmd_parser.cpp
-
-    src/common/types.h
-    src/stubs/sce_stubs.h
-)
-
-
-# -------------------------------------------------------------------------
-# Dependências do Windows
-# -------------------------------------------------------------------------
-
-enable_testing()
-
-# -------------------------------------------------------------------------
-# Bibliotecas comuns (todos os fontes exceto main.cpp)
+# Bibliotecas comuns
 # -------------------------------------------------------------------------
 add_library(AstroBotCore STATIC
     src/config/config_manager.cpp
     src/patches/patch_manager.cpp
     src/kernel/kernel_emulator.cpp
     src/gpu/vulkan_backend.cpp
+    src/gpu/command_stream.cpp
     src/gpu/vulkan_loader.cpp
     src/gpu/shader_recompiler.cpp
     src/audio/audio_backend.cpp
@@ -105,9 +53,15 @@ add_library(AstroBotCore STATIC
     src/input/input_manager.cpp
     src/core/eboot_loader.cpp
     src/core/nid_resolver.cpp
+    src/core/import_scanner.cpp
+    src/core/import_binding.cpp
+    src/core/abi_bridge.cpp
     src/core/dispatch_table.cpp
     src/assets/asset_loader.cpp
     src/assets/jxmd_parser.cpp
+    src/assets/asset_census.cpp
+    src/assets/gnf_format.cpp
+    src/assets/gnf_layout.cpp
     src/gameplay/level_collision.cpp
     src/common/types.h
     src/stubs/sce_stubs.h
@@ -117,17 +71,12 @@ target_include_directories(AstroBotCore PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(AstroBotCore PRIVATE Atrac9)
 
 # -------------------------------------------------------------------------
-# Executável principal
+# Executáveis
 # -------------------------------------------------------------------------
 add_executable(AstroBotPC WIN32 src/main.cpp)
-
 target_link_libraries(AstroBotPC PRIVATE AstroBotCore)
-
 target_include_directories(AstroBotPC PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-# -------------------------------------------------------------------------
-# Ferramentas e Testes
-# -------------------------------------------------------------------------
 add_executable(benchmark_load src/benchmark_load.cpp)
 target_link_libraries(benchmark_load PRIVATE AstroBotCore)
 target_include_directories(benchmark_load PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -163,6 +112,55 @@ add_executable(diag_assets src/diag_assets.cpp)
 target_link_libraries(diag_assets PRIVATE AstroBotCore)
 target_include_directories(diag_assets PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
+add_executable(diag_gnf src/diag_gnf.cpp)
+target_link_libraries(diag_gnf PRIVATE AstroBotCore)
+target_include_directories(diag_gnf PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(test_tex_load src/test_tex_load.cpp)
+target_link_libraries(test_tex_load PRIVATE AstroBotCore)
+target_include_directories(test_tex_load PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(test_asset_census src/test_asset_census.cpp)
+target_link_libraries(test_asset_census PRIVATE AstroBotCore)
+target_include_directories(test_asset_census PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME asset_census_validation COMMAND test_asset_census)
+
+add_executable(diag_census src/diag_census.cpp)
+target_link_libraries(diag_census PRIVATE AstroBotCore)
+target_include_directories(diag_census PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(diag_gnf_validate src/diag_gnf_validate.cpp)
+target_link_libraries(diag_gnf_validate PRIVATE AstroBotCore)
+target_include_directories(diag_gnf_validate PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(diag_command_stream src/diag_command_stream.cpp)
+target_link_libraries(diag_command_stream PRIVATE AstroBotCore)
+target_include_directories(diag_command_stream PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(test_command_stream src/test_command_stream.cpp)
+target_link_libraries(test_command_stream PRIVATE AstroBotCore)
+target_include_directories(test_command_stream PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME command_stream_validation COMMAND test_command_stream)
+
+add_executable(diag_imports src/diag_imports.cpp)
+target_link_libraries(diag_imports PRIVATE AstroBotCore)
+target_include_directories(diag_imports PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+add_executable(test_imports src/test_imports.cpp)
+target_link_libraries(test_imports PRIVATE AstroBotCore)
+target_include_directories(test_imports PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME import_catalog_validation COMMAND test_imports)
+
+add_executable(test_import_binding src/test_import_binding.cpp)
+target_link_libraries(test_import_binding PRIVATE AstroBotCore)
+target_include_directories(test_import_binding PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME import_binding_validation COMMAND test_import_binding)
+
+add_executable(test_abi_bridge src/test_abi_bridge.cpp)
+target_link_libraries(test_abi_bridge PRIVATE AstroBotCore)
+target_include_directories(test_abi_bridge PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME abi_bridge_validation COMMAND test_abi_bridge)
+
 add_executable(test_audio_at9 src/test_audio_at9.cpp)
 target_link_libraries(test_audio_at9 PRIVATE AstroBotCore)
 target_include_directories(test_audio_at9 PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -184,9 +182,8 @@ add_test(NAME software_rasterizer_validation COMMAND test_software_rasterizer)
 add_executable(benchmark_software_rasterizer src/benchmark_software_rasterizer.cpp)
 target_include_directories(benchmark_software_rasterizer PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-# -------------------------------------------------------------------------
-# Dependências do Windows (aplicadas a todos os executáveis)
-# -------------------------------------------------------------------------
+enable_testing()
+
 if(WIN32)
     set(ALL_TARGETS
         AstroBotPC
@@ -198,6 +195,17 @@ if(WIN32)
         test_self_reconstruction
         diag_eboot
         diag_assets
+        diag_gnf
+        diag_census
+        diag_gnf_validate
+        diag_command_stream
+        diag_imports
+        test_tex_load
+        test_asset_census
+        test_command_stream
+        test_imports
+        test_import_binding
+        test_abi_bridge
         test_audio_at9
         test_gameplay_movement
         test_level_collision
@@ -223,9 +231,6 @@ if(WIN32)
     endforeach()
 endif()
 
-# -------------------------------------------------------------------------
-# Instala o settings.ini junto ao executável
-# -------------------------------------------------------------------------
 add_custom_command(TARGET AstroBotPC POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:AstroBotPC>/config
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

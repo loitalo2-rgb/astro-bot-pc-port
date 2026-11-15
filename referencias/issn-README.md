@@ -1,0 +1,112 @@
+# issn_pc: inFAMOUS Second Son nativo no PC
+
+Port nativo de **inFAMOUS Second Son** (PS4) para **Windows** (Vulkan). Builds de teste: o jogo é
+jogável, mas espere bugs. Os shaders são preparados na primeira abertura (alguns minutos, uma
+vez).
+
+> **Nenhum arquivo do jogo vem neste projeto.** Você precisa do dump do seu próprio jogo, feito
+> da sua cópia no seu PS4: veja [docs/issn/DUMP.md](docs/issn/DUMP.md).
+> Projeto sem relação com a Sony Interactive Entertainment ou a Sucker Punch Productions.
+> inFAMOUS é marca da Sony Interactive Entertainment.
+
+💬 **Discord:** https://discord.gg/y82HQ5uTQg (novidades, ajuda e builds de teste / news, help and test builds)
+
+[English below](#english)
+
+## Download
+
+Em [Releases](../../releases), baixe o `issn-windows.zip`. Extraia em qualquer pasta (fora do
+zip) e abra `inFAMOUS Second Son.exe`. Escolha a pasta do jogo (a que tem o `eboot.bin`) e clique
+em PLAY. Se o Windows mostrar "O Windows protegeu o computador": Mais informações → Executar
+assim mesmo (o programa não é assinado).
+
+Para atualizar, extraia o zip novo por cima da pasta antiga: saves e configurações ficam.
+
+**Requisitos:** Windows 10 (1903+) ou 11 de 64 bits, placa de vídeo com Vulkan 1.3 e driver
+atualizado. Versões do jogo: CUSA00223 (EUA) e CUSA00004 (Europa), com a atualização 01.07.
+
+| | Mínimo (1080p, ~30-45 FPS) | Recomendado (1080p, 60 FPS) | Testado (1080p, ~100 FPS) |
+|---|---|---|---|
+| Processador | Intel Core 4ª geração (i5-4xxx) / AMD Ryzen 1000 / FX-8300 | Intel Core i5 8ª geração / Ryzen 5 1600 | Ryzen 7 3700X |
+| Placa de vídeo | GTX 1060 6 GB / RX 580 8 GB | GTX 1070 / RTX 2060 / RX 6600 | RX 9060 XT 16 GB |
+| Memória (RAM) | 12 GB | 16 GB | 32 GB |
+| Memória de vídeo | 6 GB | 8 GB | 16 GB |
+
+O processador precisa de AVX (Intel 2ª geração / AMD FX ou mais novo); instruções que faltam em
+alguns modelos (MOVBE, F16C, BMI1, LZCNT, SSE4A) o port traduz sozinho. Em 1440p o jogo reserva
+mais memória: 16 GB de RAM; em 4K, 32 GB. FSR 4 precisa de Radeon RX 7000 / 9000; XeSS roda em
+Arc, Radeon RX 5000+ e GeForce GTX 10+; DLSS precisa de GeForce RTX. Os números do mínimo e do
+recomendado são estimativas do próprio launcher (Gráficos > Seu PC); só o PC testado foi medido.
+
+## O que tem
+
+- **Motor gráfico do axylpup** para o Second Son (shadPS4): num Ryzen 7 3700X + RX 9060 XT,
+  90–105 FPS parado na cidade.
+- **Anti-aliasing:** o do próprio jogo, **FSR 4** (já incluído; Radeon RX 7000 / 9000) ou
+  **DLSS** (NVIDIA RTX; os arquivos da NVIDIA não vêm junto: baixe o Streamline SDK 2.14.16 e
+  copie `sl.interposer.dll`, `sl.common.dll`, `sl.dlss.dll`, `sl.pcl.dll` e `nvngx_dlss.dll` de
+  `bin\x64` para `bin\dlss`; o launcher abre essa pasta para você).
+- **Shaders preparados na primeira abertura:** o pacote traz uma semente (a lista dos shaders do
+  jogo e das configurações deles, sem nenhum código do jogo) e a primeira abertura monta os
+  shaders a partir dos arquivos do seu próprio jogo. Os de efeitos vêm prontos em qualquer placa;
+  os outros em placas como a do testador (AMD recente). O que ainda for novo compila em segundo
+  plano, sem travar o jogo.
+- **Resolução interna** (83% a 50%) com o FSR 4 reconstruindo a imagem no tamanho da janela, e
+  **Modo de desempenho** (os ajustes mais leves do próprio jogo, da 1.1 do axylpup).
+- Limite de FPS e VSync; distância de detalhe original, Longa ou Muito longa; F12 tira print.
+- **Mouse 1:1:** clique na janela do jogo e o mouse mira direto na câmera do jogo, sem a curva
+  do analógico. Y ou F7 solta o mouse; `-` / `=` mudam a velocidade.
+- **Teclado** (layout do axylpup): WASD anda, IJKL câmera, setas direcional, Espaço / Shift / C /
+  F, Q / E, U / O, R / G touchpad, Enter. **Lata de spray:** segure Z para inclinar, toque Z ou
+  segure X para chacoalhar, mire com o mouse. Os botões mudam no launcher.
+- **Controles:** DualShock 4 e DualSense com touchpad e sensor de movimento; Xbox, 8BitDo e outros
+  com o touchpad e a lata de spray emulados (L3 + R3 inclina, LB chacoalha, analógico direito mira).
+- Launcher com "Adicionar à Steam"; aberto pela Steam, o controle continua funcionando.
+
+## Compilar
+
+No Windows, com o [MSYS2](https://www.msys2.org) (shell **CLANG64**): veja
+[packaging/windows/README.md](packaging/windows/README.md). Depois das dependências:
+
+```bash
+git submodule update --init --recursive
+bash build.sh
+bash packaging/windows/package.sh   # dist/issn-windows.zip
+```
+
+## English
+
+Native PC port of **inFAMOUS Second Son** (PS4) for **Windows** (Vulkan). Test builds: the game is
+playable, but expect bugs. The first start prepares the shaders once (a few minutes).
+**No game files are included**: you need a dump of your own copy (CUSA00223 US or CUSA00004 EU).
+
+Download `issn-windows.zip` from [Releases](../../releases), extract it anywhere and open
+`inFAMOUS Second Son.exe`, choose the game folder (with `eboot.bin`) and click PLAY. Windows 10
+(1903+) / 11 64-bit and a Vulkan 1.3 GPU are needed. Minimum (1080p, ~30-45 FPS): Intel Core 4th
+gen / Ryzen 1000 / FX-8300, GTX 1060 6 GB / RX 580 8 GB, 12 GB RAM. Recommended (1080p, 60 FPS):
+Core i5 8th gen / Ryzen 5 1600, GTX 1070 / RTX 2060 / RX 6600, 16 GB RAM (32 GB for 4K). The CPU
+needs AVX; the port translates the missing MOVBE / F16C / BMI1 / LZCNT / SSE4A. Minimum and
+recommended are the launcher's estimates (Graphics > Your PC); measured: Ryzen 7 3700X + RX 9060 XT,
+about 100 FPS in the city. Features: axylpup's graphics core,
+the game's AA, FSR 4 (included) or DLSS (bring NVIDIA's Streamline 2.14.16 files into `bin\dlss`),
+shaders prepared on the first start from a shipped seed (shader list and settings, no game
+code; new ones compile in the background), internal resolution with FSR 4 upscaling, performance
+mode, frame rate limit, 1:1 mouse aim (click in the window; Y / F7 lets go), axylpup's keyboard layout,
+DualShock 4 / DualSense touchpad and motion, touchpad and spray-can emulation for other pads, and
+Add to Steam. Building: [packaging/windows/README.md](packaging/windows/README.md).
+
+## Créditos / Credits
+
+- Gráficos / graphics: o build do shadPS4 do **axylpup** para o Second Son
+  ([axylpup/shadPS4](https://github.com/axylpup/shadPS4)), sobre o
+  [shadPS4](https://github.com/shadps4-emu/shadPS4); trabalhos anteriores no inFAMOUS de
+  **Ayoub** (shadPS4-AYOUB1080p) e **HayatoG** (iss_pc). Mouse 1:1, layout de teclado e
+  sensor de movimento sintético: design do axylpup.
+- Base do port / port base: [gow3_pc](https://github.com/FelipePrado0/gow3_pc) (Felipe Prado),
+  que vem do [bloodborne_pc](https://github.com/Supermedo/bloodborne_pc) (deadinside28,
+  Supermedo), com cuesta4 e a equipe do shadPS4. Documentação herdada: [docs/base](docs/base/README.md).
+- FSR 4: AMD FidelityFX (MIT). Fonte do launcher: Bebas Neue (SIL OFL).
+
+## Licença / License
+
+GNU GPL v2 ou posterior ([LICENSE](LICENSE)). Componentes de terceiros mantêm suas licenças.

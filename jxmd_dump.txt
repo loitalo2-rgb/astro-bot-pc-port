@@ -1,0 +1,38 @@
+JXMD dump: D:/Games/abaixar/jogo/PPSA21567/data/prein/characters/gfx/astro_lowpoly_costume.jxm
+Tamanho: 153632 bytes
+Chunks: 26
+magic offset      size        payload   count   stride  
+JXMD  0x0       0x130     256     14      48      
+CTEX  0x130     0xf0      112     5       16      
+TEXI  0x220     0x270     224     12      36      
+MMNI  0x490     0x40      48      1       2       
+MESN  0x4d0     0xc0      160     8       16      
+SUBM  0x590     0x740     640     38      152     
+POSE  0xcd0     0x1120    32      0       64      
+BIND  0x1df0    0x14a0    32      0       64      
+JINT  0x3290    0x3b0     112     5       10      
+TINT  0x3640    0x4c0     128     6       16      
+SCLT  0x3b00    0x50      64      2       4       
+GEOM  0x3b50    0x1c0     192     10      32      
+VBDT  0x3d10    0x1e0     240     13      80      
+IBDT  0x3ef0    0x90      128     6       16      
+VBBD  0x3f80    0x119e0   32      0       1       
+IBBD  0x15960   0x2be0    32      0       1       
+MESH  0x18540   0x120     160     8       16      
+CATG  0x18660   0x90      96      4       16      
+OSMD  0x186f0   0x90      128     6       12      
+MTTB  0x18780   0x8b10    32      0       1       
+MATI  0x21290   0x180     224     12      40      
+MATD  0x21410   0x380     32      0       1       
+LTTB  0x21790   0x990     32      0       1       
+USDT  0x22120   0x7e0     96      4       16      
+STBL  0x22900   0x890     64      2       8       
+STBD  0x23190   0x2690    32      0       1       
+
+Geometria:
+  vertices: 1236
+  indices:  5598
+  stride:   44
+  scale:    0.00012207
+  bbox min: -1.29761, -1.98059, -0.799683
+  bbox max: 1.29395, 1.97925, 0.624634

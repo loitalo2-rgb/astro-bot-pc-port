@@ -1,4 +1,6 @@
 #include "asset_loader.h"
+#include "gnf_format.h"
+#include "gnf_layout.h"
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -40,24 +42,6 @@ uint32_t Standard64kOffset(uint32_t x, uint32_t y, uint32_t bytesPerElement) {
     default:
         return 0;
     }
-}
-
-struct TileBlock {
-    uint32_t widthBlocks = 64;
-    uint32_t heightBlocks = 64;
-};
-
-TileBlock Standard64kBlock(uint32_t bytesPerElement) {
-    TileBlock block;
-    if (bytesPerElement == 0) return block;
-
-    uint32_t elements = 65536u / bytesPerElement;
-    uint32_t bits = 0;
-    while ((1u << bits) < elements) ++bits;
-
-    block.widthBlocks = 1u << ((bits + 1) / 2);
-    block.heightBlocks = 1u << (bits / 2);
-    return block;
 }
 
 } // namespace
@@ -207,8 +191,15 @@ bool AssetLoader::LoadGnf(const std::string& filePath, GnfTexture& outTexture) {
     const uint32_t tileMode = (reg3 >> 20) & 0x1Fu;
     const uint32_t formatId = (reg1 >> 16) & 0xFFFFu;
 
-    const bool isBc4 = (formatId == 0xCAF0u || formatId == 0x8AF0u);
-    const uint32_t blockBytes = isBc4 ? 8u : 16u;
+    const GnfFormatInfo format = LookupGnfFormat(formatId);
+    if (!format.known || !format.blockCompressed) {
+        std::cerr << "[AssetLoader] GNF com formato 0x" << std::hex << formatId
+                  << std::dec << " (" << format.name
+                  << ") nao mapeado; carga recusada em vez de adivinhar: "
+                  << filePath << "\n";
+        return false;
+    }
+    const uint32_t blockBytes = format.blockBytes;
 
     outTexture.name = fs::path(filePath).filename().string();
     outTexture.width = widthBlocks * 4u;
@@ -219,20 +210,31 @@ bool AssetLoader::LoadGnf(const std::string& filePath, GnfTexture& outTexture) {
     outTexture.bytesPerBlock = blockBytes;
     outTexture.formatId = formatId;
     outTexture.dataOffset = dataOffset;
+    outTexture.formatName = format.name;
+    outTexture.vulkanFormat = format.vulkanFormat;
 
-    if (isBc4) {
-        outTexture.formatName = "BC4_UNORM (GNF PS5)";
-        outTexture.vulkanFormat = 139; // VK_FORMAT_BC4_UNORM_BLOCK
-    } else if (formatId == 0xCB30u || formatId == 0xCB60u) {
-        outTexture.formatName = "BC7_SRGB (GNF PS5)";
-        outTexture.vulkanFormat = 146; // VK_FORMAT_BC7_SRGB_BLOCK
-    } else {
-        outTexture.formatName = "BC7_UNORM (GNF PS5)";
-        outTexture.vulkanFormat = 145; // VK_FORMAT_BC7_UNORM_BLOCK
+    if (payloadSize > fileSize - dataOffset) {
+        std::cerr << "[AssetLoader] Payload declarado (" << payloadSize
+                  << " bytes) passa do fim do arquivo " << filePath
+                  << "; carga recusada.\n";
+        return false;
+    }
+
+    // Invariant verified offline on all 28.949 GNF of the dump: the declared
+    // payload is never smaller than the linear sum of the mip chain. A file
+    // that violates it would be decoded past its own data, so refuse instead.
+    const GnfLayout expectedLayout = ComputeGnfLayout(
+        outTexture.width, outTexture.height, outTexture.sourceMipLevels,
+        blockBytes, tileMode != 0);
+    if (expectedLayout.unpaddedBytes > payloadSize) {
+        std::cerr << "[AssetLoader] Payload (" << payloadSize
+                  << ") menor que a cadeia de mips (" << expectedLayout.unpaddedBytes
+                  << "); carga recusada: " << filePath << "\n";
+        return false;
     }
 
     const bool tiled = (tileMode != 0u);
-    const TileBlock tileBlock = Standard64kBlock(blockBytes);
+    const GnfTileBlock tileBlock = GnfStandard64kBlock(blockBytes);
 
     outTexture.data.clear();
     outTexture.mips.clear();
