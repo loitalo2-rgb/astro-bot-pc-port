@@ -33,7 +33,7 @@ set KYTY_SUBMISSION_COALESCE=1
 set KYTY_PENDING_REFRESH_US=50
 set KYTY_EOP_FLUSH_BATCH=16
 
-set ASTRO_UPSCALER_BACKEND=fsr31
+set ASTRO_UPSCALER_BACKEND=fsr41
 set ASTRO_UPSCALER_QUALITY=performance
 set ASTRO_FRAME_GENERATION=1
 
@@ -50,7 +50,7 @@ echo ========================================================
 echo   Iniciando Astro Bot PC (1920x1080) - Modo Alta Performance
 echo   Ray-Tracing: DESATIVADO (FPS MAXIMO)
 echo   Shader Precompile: 8 THREADS ATIVAS
-echo   Upscaler: FSR31 (PERFORMANCE) ^| FrameGen: 1
+echo   Upscaler: FSR41 (PERFORMANCE) ^| FrameGen: 1
 echo   GPU: AMD Radeon RX 9060 XT (16 GB VRAM)
 echo ========================================================
 AstroBot.exe -perfDisplay false %*
