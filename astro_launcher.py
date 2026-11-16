@@ -42,7 +42,7 @@ class AstroLauncherApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Astro Bot PC - Launcher & Otimizador de FPS (By: @loitalo2-rgb)")
-        self.geometry("700x670")
+        self.geometry("700x705")
         self.resizable(False, False)
         self.config = load_config()
         self.configure(bg="#121826")
@@ -185,6 +185,13 @@ class AstroLauncherApp(tk.Tk):
                                   activebackground="#1E293B", activeforeground="#38BDF8")
         chk_perf.grid(row=9, column=0, columnspan=2, sticky="w", pady=3)
 
+        # 11. OTIMIZAÇÃO DE CPU: Oclusão de Geometria e Otimização de Sombras/LOD
+        self.culling_var = tk.BooleanVar(value=(self.config.get("Engine_GPU", "culling_opt", fallback="1") == "1"))
+        chk_cull = tk.Checkbutton(main_frame, text="⚡ Culling de Geometria e Otimização de Sombras/LOD (Alivia o Core i7)",
+                                  variable=self.culling_var, bg="#1E293B", fg="#38BDF8", font=("Segoe UI", 9, "bold"),
+                                  selectcolor="#0F172A", activebackground="#1E293B", activeforeground="#38BDF8")
+        chk_cull.grid(row=10, column=0, columnspan=2, sticky="w", pady=3)
+
         # Botões inferiores
         btn_frame = tk.Frame(self, bg="#121826")
         btn_frame.pack(fill="x", padx=16, pady=(0, 10))
@@ -265,6 +272,7 @@ class AstroLauncherApp(tk.Tk):
         self.config["Engine_GPU"]["rt_mode"] = "0" if self.rt_fast_var.get() else "1"
         self.config["Engine_GPU"]["rt_stub"] = "1" if self.rt_fast_var.get() else "0"
         self.config["Graphics"]["perf_display"] = "1" if self.perf_var.get() else "0"
+        self.config["Engine_GPU"]["culling_opt"] = "1" if self.culling_var.get() else "0"
 
         save_config(self.config)
         self.write_launcher_bats()
@@ -287,6 +295,9 @@ class AstroLauncherApp(tk.Tk):
         precompile = self.config.get("Engine_GPU", "shader_precompile", fallback="1")
         perf = self.config.get("Graphics", "perf_display", fallback="0")
         perf_flag = "true" if perf == "1" else "false"
+        cull_opt = (self.config.get("Engine_GPU", "culling_opt", fallback="1") == "1")
+        occlusion_val = "1" if cull_opt else "0"
+        shadow_skip = "1" if cull_opt else "0"
 
         bat_content = f"""@echo off
 title Astro Bot PC - Running
@@ -322,6 +333,12 @@ set KYTY_TEXTURE_ASYNC_STAGING=1
 set KYTY_SUBMISSION_COALESCE=1
 set KYTY_PENDING_REFRESH_US=50
 set KYTY_EOP_FLUSH_BATCH=16
+
+rem OTIMIZACOES DE CPU, LOD E SOMBRAS
+set KYTY_GPU_OCCLUSION={occlusion_val}
+set KYTY_LOD_STATS_MODE=gpu
+set KYTY_PUSH_SHADOW_FRESH_SKIP={shadow_skip}
+set KYTY_FAST_BACKING_TRANSFERS=1
 
 set ASTRO_UPSCALER_BACKEND={up}
 set ASTRO_UPSCALER_QUALITY={qual}
